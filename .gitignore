@@ -1,3 +1,13 @@
+### Project
+
+all/
+**/**/*
+!bench_sk/*.py
+!keras_test/*.py
+
+
+# Github template #########################################
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
