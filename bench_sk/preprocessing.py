@@ -100,3 +100,42 @@ def flattenLabel(train, test, toFlatten, drop = 0):
             train = innerFL(oe, train, i)
             test = innerFL(oe, test, i)
     return train, test
+
+def getTrainTest1(pathToAll = "../all/"):
+    trainPath = pathToAll + "/train.csv"
+    print("trainPath ", trainPath)
+    testPath = pathToAll + "/test/test.csv"
+    print("testPath ", testPath)
+    
+    # num & ordinal
+    numeric_features = ['Age', 'MaturitySize', 'FurLength', 'Health', 'Quantity', 'Fee', 'VideoAmt', 'PhotoAmt']
+    nominal_features = ['Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3', 'Vaccinated',
+                         'Dewormed', 'Sterilized', 'State', 'RescuerID']
+    
+    # read csv and set some to na
+    train = readBaseCSV(trainPath)
+    test = readBaseCSV(testPath)
+    
+    # infer na to mean of value (even for unordered value because they are all binary)
+    train, test = inferNa(train, test, 
+                          infer = {"Health" : "mean", 
+                                    "MaturitySize" : "mean",
+                                    "FurLength" : "mean", 
+                                    "Gender" : "mean",
+                                    "Vaccinated" : "mean",
+                                    "Dewormed" : "mean",
+                                    "Sterilized" : "mean"})
+    
+    toEncode = ['State', 'RescuerID']
+    train, test = encodeLabel(train, test,  toEncode)
+    
+    # can probably drop binary (yes, no, na) features from the one_hot transformer 
+    # has been set (after standardization) to yes = 0, no = 1, na = mean (~0.5)
+    toFlatten = np.setdiff1d(nominal_features, ["Sterilized", "Dewormed", "Vaccinated", "Gender"])
+    train, test = flattenLabel(train, test, toFlatten, drop = 4)
+    
+    return train, test
+    
+
+
+    

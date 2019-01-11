@@ -1,9 +1,14 @@
 ### Project
 
+.gitignore
 all/
 **/**/*
+paper/*
+**/**/*.pdf
+**/*.pdf
 !bench_sk/*.py
-!keras_test/*.py
+!tf_test/*.py
+!NN_loss/*.py
 
 
 # Github template #########################################

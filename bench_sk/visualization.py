@@ -9,6 +9,7 @@ Created on Jan 4, 2019
 import matplotlib.pyplot as plt
 from pandas.plotting import scatter_matrix
 
+print("kjkj")
 # how are pure breed vs bastard dealt with? pure: Breed2 = 0, fine for ml
 # print(trainSet[["Breed1", "Breed2"]])
 # print(type(trainSet["Name"][14984])) # ??? nan type for Name???
@@ -33,26 +34,26 @@ from pandas.plotting import scatter_matrix
 # cordic_sorted = sorted(cordic.items(), key=lambda kv: abs(kv[1]))
 # print(cordic_sorted[-5:])
 
-
-clf = tree.DecisionTreeClassifier()
-clf = clf.fit(train.drop(["AdoptionSpeed", "PetID"], axis = 1), train["AdoptionSpeed"])
-
-
-import graphviz
-
-featName = train.drop(["AdoptionSpeed", "PetID"], axis = 1).dtypes
- 
-dot_data = tree.export_graphviz(clf, out_file=None) 
-graph = graphviz.Source(dot_data) 
-graph.render("iris") 
- 
-dot_data = tree.export_graphviz(clf, out_file=None, 
-                     feature_names=None,  
-                     class_names=None,  
-                     filled=True, rounded=True,  
-                     special_characters=True)  
-graph = graphviz.Source(dot_data)  
-graph.view()
+# 
+# clf = tree.DecisionTreeClassifier()
+# clf = clf.fit(train.drop(["AdoptionSpeed", "PetID"], axis = 1), train["AdoptionSpeed"])
+# 
+# 
+# import graphviz
+# 
+# featName = train.drop(["AdoptionSpeed", "PetID"], axis = 1).dtypes
+#  
+# dot_data = tree.export_graphviz(clf, out_file=None) 
+# graph = graphviz.Source(dot_data) 
+# graph.render("iris") 
+#  
+# dot_data = tree.export_graphviz(clf, out_file=None, 
+#                      feature_names=None,  
+#                      class_names=None,  
+#                      filled=True, rounded=True,  
+#                      special_characters=True)  
+# graph = graphviz.Source(dot_data)  
+# graph.view()
 
 
 
