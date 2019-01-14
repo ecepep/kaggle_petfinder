@@ -6,6 +6,10 @@ Created on Jan 4, 2019
 This is just a bench
 
 @todo
+https://github.com/helenuria/Petfinder-API/blob/master/README.md
+https://www.kaggle.com/fiancheto/petfinder-simple-lgbm-baseline-lb-0-399
+https://www.kaggle.com/jobs
+
 - try with gbt
 - clean code with everything in a pipeline
 - go to tf_test to use perceptron more extensively (optimized on kappa)

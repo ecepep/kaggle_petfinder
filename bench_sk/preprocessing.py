@@ -13,7 +13,7 @@ import sklearn.preprocessing as preprocessing
 from pandas.core.series import Series
 
 
-def readBaseCSV(path, shuffle = True, dropText = True,
+def readBaseCSV(path, silent = False, shuffle = True, dropText = True,
                   isNa = {"Health" : 0, "MaturitySize" : 0, "FurLength" : 0, "Gender" : 3,
                                 "Vaccinated" : 3, "Dewormed" : 3, "Sterilized" : 3}):
     '''
@@ -24,12 +24,12 @@ def readBaseCSV(path, shuffle = True, dropText = True,
     :param isNa:
     '''
     df = pd.read_csv(path)
-    print("shape initial ", df.shape)
+    if (not silent): print("shape initial ", df.shape)
     
     # replace "undefined|not sure" values to na
     for i in isNa.keys():
         toNa = (df[i] == isNa[i]).sum()
-        if toNa > 0: print("For",i, ",", toNa, "has been set to NA.")
+        if (toNa > 0) & (not silent): print("For",i, ",", toNa, "has been set to NA.")
         df[i] = df[i].replace(isNa[i], np.nan)
   
     if shuffle:  df = df.take(np.random.permutation(df.shape[0]))
@@ -101,11 +101,11 @@ def flattenLabel(train, test, toFlatten, drop = 0):
             test = innerFL(oe, test, i)
     return train, test
 
-def getTrainTest1(pathToAll = "../all/"):
+def getTrainTest1(pathToAll = "../all/", silent = False):
     trainPath = pathToAll + "/train.csv"
-    print("trainPath ", trainPath)
+    if (not silent): print("trainPath ", trainPath)
     testPath = pathToAll + "/test/test.csv"
-    print("testPath ", testPath)
+    if (not silent): print("testPath ", testPath)
     
     # num & ordinal
     numeric_features = ['Age', 'MaturitySize', 'FurLength', 'Health', 'Quantity', 'Fee', 'VideoAmt', 'PhotoAmt']
@@ -113,8 +113,8 @@ def getTrainTest1(pathToAll = "../all/"):
                          'Dewormed', 'Sterilized', 'State', 'RescuerID']
     
     # read csv and set some to na
-    train = readBaseCSV(trainPath)
-    test = readBaseCSV(testPath)
+    train = readBaseCSV(trainPath, silent = silent)
+    test = readBaseCSV(testPath, silent = silent)
     
     # infer na to mean of value (even for unordered value because they are all binary)
     train, test = inferNa(train, test, 
