@@ -3,6 +3,8 @@
 https://github.com/JHart96/keras_ordinal_categorical_crossentropy
 
 @note: Does not seem to improve result (ill thought?, bugged? or just equivalent?)
+
+@see tf_mvp.py comment about loss for truly intersting approach
 '''
 
 from tensorflow.keras import backend

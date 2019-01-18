@@ -65,7 +65,7 @@ from tensorflow.python.keras.callbacks import EarlyStopping
 #######################################################################
 
 # meta to determined which method to use with either ordered input for y or not
-METHOD = "ordered" # "categorical" "ordered"
+METHOD = "categorical" # "categorical" "ordered"
 
 if (METHOD == "ordered"):
     def toOrderedCategorical(y, num_classes):
@@ -97,10 +97,11 @@ elif(METHOD == "categorical"):
         return [np.argmax(i) for i in y]
 
     y_transform = tf.keras.utils.to_categorical
-    reg = tf.keras.regularizers.l2(0.00005)
+    reg = None
+#     reg = tf.keras.regularizers.l2(0.00005)
     finalActivation = tf.nn.softmax
-    methodLoss = 'categorical_crossentropy'  # OCC.lossOCCQuadratic, lossOCC
-    cbEarly = tf.keras.callbacks.EarlyStopping(monitor='acc', min_delta=0.001,
+    methodLoss = "categorical_crossentropy"  # 'categorical_crossentropy', OCC.lossOCCQuadratic, lossOCC
+    cbEarly = tf.keras.callbacks.EarlyStopping(monitor='acc', min_delta=0.0001,
                                            patience=20, verbose=0, mode='auto')
     
 else: raise "METHOD unspecified or unknown"
@@ -115,7 +116,7 @@ x_train, x_test, y_train, y_test = train_test_split(
 
 standardizer = Normalizer(norm="l1")
 x_train = standardizer.fit_transform(x_train)
-x_test = standardizer.fit_transform(x_test)
+x_test = standardizer.transform(x_test)
 
 y_train = y_transform(y_train, num_classes=5)
 y_test = y_transform(y_test, num_classes=5)
@@ -233,10 +234,13 @@ METHOD = "ordered": (without reg)
     (no reg, small dropout)
     kappaScore train: 0.3094877306310425
     kappaScore: 0.27617690298776953
+    kappaScore train: 0.3163260387475022
+    kappaScore: 0.27361451117811175
 METHOD = "categorical(with reg 0.00005)
     kappaScore train: 0.3389869346011669
     kappaScore: 0.28156816168831833
     kappaScore train: 0.3231622843578743
     kappaScore: 0.27562959412181354
+    small dropout with occ quadratic loss
 """
 

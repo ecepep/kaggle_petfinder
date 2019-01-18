@@ -9,6 +9,7 @@ paper/*
 !bench_sk/*.py
 !tf_test/*.py
 !NN_loss/*.py
+!classification/*.py
 
 
 # Github template #########################################

@@ -3,7 +3,10 @@ Created on Jan 4, 2019
 
 @author: ppc
 
-This is just a bench
+This is just a bench (minimal prep + forest)
+
+
+
 
 @todo
 https://github.com/helenuria/Petfinder-API/blob/master/README.md
