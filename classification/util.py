@@ -3,7 +3,6 @@ Created on Jan 14, 2019
 
 @author: ppc
 '''
-
 from bench_sk.preprocessing import *
 import sklearn.metrics as metrics
 
@@ -11,6 +10,10 @@ from pprint import pprint
 from time import time
 from sklearn.model_selection._split import ShuffleSplit, train_test_split
 from sklearn.pipeline import Pipeline
+import traceback
+import pdb
+import sys
+from traceback import print_tb
 
 
 def getTrainTest2(pathToAll = "../", silent = True):
@@ -78,8 +81,14 @@ def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None):
     if not parameters is None: print("parameters:")
     if not parameters is None: pprint(parameters)
     t0 = time()
-    grid_search.fit(X, y)
-    
+
+    try:
+        grid_search.fit(X, y)
+    except Exception as e:
+        traceback.print_tb(sys.exc_info()[2])
+        print("ERROR:", e)
+        pdb.post_mortem()
+        
     print("done in %0.3fs" % (time() - t0))
     print()
 

@@ -3,33 +3,34 @@ Created on Jan 14, 2019
 
 @author: ppc
 
+main_pipe allow to run and acess the different pipelines
+
+
 @todo 
+- ask on stacko comprehension list func scope
+- param opt on tfid, check tfid param, tfid maxscaler for mlp (contrary to tfid philosophy?) maybe absolute max
 - TruncatedSCD
 - implement method ordered
 - extra data
 - data augmentation from ggle
 - @see bench and tf_test todos
+- dir paths' hard coded
+- test pipe_rdf_des_meta
      
 '''
 
-from bench_sk.preprocessing import *
-from classification.util import *
-from classification.transformer import *
-from classification.custom_nn_base import CustomNNBase
-from classification.custom_nn_categorical import CustomNNCategorical
+from classification.util import getTrainTest2, quadratic_cohen_kappa_score,\
+ check_generalization, printCatGen, fitPrintGS
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble.forest import RandomForestClassifier
-from sklearn.pipeline import Pipeline, FeatureUnion
+
+from sklearn.metrics.scorer import make_scorer
 from sklearn.model_selection._split import ShuffleSplit
-import tensorflow as tf
-
-import copy
-from multiprocessing import cpu_count
-
-import warnings
-from classification.custom_nn_ordered import CustomNNordered
 from sklearn.model_selection._search import GridSearchCV
+
+from multiprocessing import cpu_count
+import warnings
+import copy
+
 
 # pd.options.mode.chained_assignment = 'raise'
 
@@ -38,76 +39,18 @@ from sklearn.model_selection._search import GridSearchCV
 #  
 # warnings.warn =  custom_warn
 
-
+#################################################################"
+#definition of all pipelines
+from classification.pipelines import *
+from preprocessed.metadata import merge_metadata
+#################################################################"
 
 pathToAll = "../all" # path to dataset dir
+meta_dir = pathToAll + "/preprocessed/metadata_label/"
 # read train, test csvs, set unknown to NA and shuffle
 train, test = getTrainTest2(pathToAll)
-
-# csv features' type
-numeric_features = ['Age', 'Quantity', 'Fee', 'VideoAmt', 'PhotoAmt']
-ordinal_features = ['MaturitySize', 'FurLength', 'Health']
-nominal_features = ['Breed1', 'Breed2', 'Color1', 'Color2', 'Color3', 'State', 'RescuerID']
-binary_features = ['Gender', 'Vaccinated', 'Dewormed', 'Sterilized']
-text_features = ["Name", "Description"]
-
-not_a_feat = ["AdoptionSpeed", "PetID"]
-# feat set with NAs at getTrainTest2, NAs to infer as mean of col
-feat_with_nas = ordinal_features + binary_features
-
-
-##############################################################################
-# base for pipes
-##############################################################################
-num_pipe = Pipeline([
-            ('sel_num', DataFrameSelector(numeric_features + binary_features + ordinal_features, dtype = 'float32')),
-            ("scaler", StandardScaler())
-        ])
-
-nom_pipe_label_encode = Pipeline([
-            ('sel_nom', DataFrameSelector(nominal_features)),
-            ('encoder', PipeLabelEncoder(silent=True))
-        ])
-
-##############################################################################
-# pipes for random forest
-##############################################################################
-pipe_rdf = Pipeline([
-    ('infer_na_mean', inferNA(feat_with_nas, method = "mean")), 
-    ('u_prep', FeatureUnion([
-        ('num_pipe', num_pipe),
-        ('nom_pipe_label_encode', nom_pipe_label_encode)
-    ])),
-    ('clf', RandomForestClassifier(n_estimators = 200)),
-])
-    
-##############################################################################
-# pipes for mlp
-##############################################################################
-print("nom_pipe_label_encode_scale :/")
-nom_pipe_label_encode_scale = Pipeline([
-            ('sel_nom', DataFrameSelector(nominal_features)),
-            ('encoder', PipeLabelEncoder(silent=True, astype = "float64")),
-# loosy way of running mlp with nominal without burning dim for fairer compare with trees
-            ("scaler", StandardScaler())            
-        ])
-
-epoch = 500
-pipe_mlp = Pipeline([
-    ('infer_na_mean', inferNA(feat_with_nas, method = "mean")), 
-    ('u_prep', FeatureUnion([
-        ('num_pipe', num_pipe),
-        ('nom_pipe_label_encode_scale', nom_pipe_label_encode_scale)
-    ])),
-    ('clf', CustomNNCategorical(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
-                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
-                                epoch = epoch))
-])
-
-pipe_mlp_ordered = copy.deepcopy(pipe_mlp)
-pipe_mlp_ordered.named_steps.clf = CustomNNordered(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
-                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
-                                epoch = epoch)
+# add features preprocessed from metadata dir :see preprocessed/prep_metadata
+train, test = merge_metadata(meta_dir, train, test)
 
 if __name__ == "__main__":
 ##############################################################################
@@ -116,47 +59,59 @@ if __name__ == "__main__":
     parameters = {
 #         'clf__n_estimators': (100, 200, 300, 400), # high influence. 100: kappa ==> 0.340, 200 ==> 0.386, 200>300
     #     'clf__min_samples_leaf': (1, 5, 10, 30,) # . 1 lower better
-        "clf__max_features":("sqrt", "log2", 2,3,4,5,6) 
+#         "clf__max_features":("sqrt", "log2", 2,3,4,5,6) # auto = sqrt, seems fine
     }
     # multiprocessing requires the fork to happen in a __main__ protected
     n_cpu =  cpu_count() 
     if n_cpu == 2: print("debug no multithread")
-    cv_gs = 3 # strat cross-val
     cv_gs = ShuffleSplit(n_splits=1, test_size=0.2, random_state=None)
+    cv_gs = 3 # strat cross-val
 
-    qwk_scorer = metrics.make_scorer(quadratic_cohen_kappa_score)
-    grid_search = GridSearchCV(pipe_rdf, parameters, scoring = qwk_scorer, cv=cv_gs,
+    qwk_scorer = make_scorer(quadratic_cohen_kappa_score)
+     
+    print("pipe_rdf_oh")
+    grid_search = GridSearchCV(pipe_rdf_oh, parameters, scoring = qwk_scorer, cv=cv_gs,
                                n_jobs=n_cpu-1, verbose=1)
     fitPrintGS(grid_search, X = train.copy(), y = train["AdoptionSpeed"],
-                pipeline = pipe_rdf, parameters = parameters)
-     
+            pipeline = pipe_rdf_oh, parameters = parameters)
+# to test pipe_rdf_des_meta
+#     print("pipe_rdf")
+#     grid_search = GridSearchCV(pipe_rdf, parameters, scoring = qwk_scorer, cv=cv_gs,
+#                                n_jobs=n_cpu-1, verbose=1)
+#     fitPrintGS(grid_search, X = train.copy(), y = train["AdoptionSpeed"],
+#             pipeline = pipe_rdf, parameters = parameters)
     
 ##############################################################################
-# Custom MLP categorical_crossentropy
+# Custom MLP categorical_crossentropy and ordered with binary crossentropy
 ##############################################################################
     n_cpu = 2 # mutlithreaded alreay implement through keras (btw: 1 = 2-1)
-#     grid_search = GridSearchCV(pipe_rdf, parameters, scoring = qwk_scorer, cv=cv_gs,
-#                                n_jobs=n_cpu-1, verbose=1)
-#     fitPrintGS(grid_search, X = train.copy(), y = train["AdoptionSpeed"],
-#             pipeline = pipe_rdf, parameters = parameters)
-#     grid_search = GridSearchCV(pipe_rdf, parameters, scoring = qwk_scorer, cv=cv_gs,
-#                                n_jobs=n_cpu-1, verbose=1)
-#     fitPrintGS(grid_search, X = train.copy(), y = train["AdoptionSpeed"],
-#             pipeline = pipe_rdf, parameters = parameters)
+    print("pipe_mlp")
+    grid_search = GridSearchCV(pipe_mlp, parameters, scoring = qwk_scorer, cv=cv_gs,
+                               n_jobs=n_cpu-1, verbose=1)
+    fitPrintGS(grid_search, X = train.copy(), y = train["AdoptionSpeed"],
+            pipeline = pipe_mlp, parameters = parameters)
+    print("pipe_mlp_oh")
+    grid_search = GridSearchCV(pipe_mlp_oh, parameters, scoring = qwk_scorer, cv=cv_gs,
+                               n_jobs=n_cpu-1, verbose=1)
+    fitPrintGS(grid_search, X = train.copy(), y = train["AdoptionSpeed"],
+            pipeline = pipe_mlp_oh, parameters = parameters)
 
-        
-    print("rdf")
-    gen = check_generalization(pipe_rdf, metric = quadratic_cohen_kappa_score, 
-                         X = train.copy(), y = train["AdoptionSpeed"])
-    printCatGen(gen)
-    print("categorical")
-    gen = check_generalization(pipe_mlp, metric = quadratic_cohen_kappa_score, 
-                         X = train.copy(), y = train["AdoptionSpeed"])
-    printCatGen(gen)
-    print("ordered")
-    gen = check_generalization(pipe_mlp_ordered, metric = quadratic_cohen_kappa_score, 
-                         X = train.copy(), y = train["AdoptionSpeed"])
-    printCatGen(gen)
+
+##############################################################################
+# generalization 
+##############################################################################
+#     print("rdf")
+#     gen = check_generalization(pipe_rdf, metric = quadratic_cohen_kappa_score, 
+#                          X = train.copy(), y = train["AdoptionSpeed"])
+#     printCatGen(gen)
+#     print("categorical")
+#     gen = check_generalization(pipe_mlp, metric = quadratic_cohen_kappa_score, 
+#                          X = train.copy(), y = train["AdoptionSpeed"])
+#     printCatGen(gen)
+#     print("ordered")
+#     gen = check_generalization(pipe_mlp_ordered, metric = quadratic_cohen_kappa_score, 
+#                          X = train.copy(), y = train["AdoptionSpeed"])
+#     printCatGen(gen)
  
 """
 easy overfit with nom_pipe_label_encode_scale feat (too high variance)

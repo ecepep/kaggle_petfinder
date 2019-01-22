@@ -16,7 +16,7 @@ https://www.kaggle.com/jobs
 - try with gbt
 - clean code with everything in a pipeline
 - go to tf_test to use perceptron more extensively (optimized on kappa)
-- separate preprocessing from analysis
+- separate preprocessed from analysis
 - add more data: photo metadata, text, photo...
 - FIND alternate to one hot encode, fight curse of dim: regularization, 
 grouping color and breed, hashing tricks?, custom feat from (state-> dist to kuala or nb inhabitant)

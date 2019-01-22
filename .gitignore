@@ -10,6 +10,7 @@ paper/*
 !tf_test/*.py
 !NN_loss/*.py
 !classification/*.py
+!preprocessed/*.py
 
 
 # Github template #########################################

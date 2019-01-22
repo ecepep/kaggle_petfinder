@@ -9,7 +9,7 @@ Created on Jan 4, 2019
 import pandas as pd
 import numpy as np
 
-import sklearn.preprocessing as preprocessing
+import sklearn.preprocessing
 from pandas.core.series import Series
 
 
@@ -64,7 +64,7 @@ def inferNa(train, test,
     return train, test
 
 def encodeLabel(train, test, nominal_features):
-    le = preprocessing.LabelEncoder()
+    le = sklearn.preprocessing.LabelEncoder()
     for col in nominal_features:
         data = train[col].append(test[col])
         le.fit(data)
@@ -86,7 +86,7 @@ def flattenLabel(train, test, toFlatten, drop = 0):
         else: 
             train, test = encodeLabel(train, test, [i]) # @todo dirty code, generify this train, test, data
             data = train[i].append(test[i])
-            oe = preprocessing.OneHotEncoder(sparse=False, categories='auto')
+            oe = sklearn.preprocessing.OneHotEncoder(sparse=False, categories='auto')
             data = data.values.reshape(len(data), 1)
             oe.fit(data)
             def innerFL(oe, df, i):
