@@ -14,6 +14,7 @@ import traceback
 import pdb
 import sys
 from traceback import print_tb
+from sklearn.model_selection._search import GridSearchCV
 
 
 def getTrainTest2(pathToAll = "../", silent = True):
@@ -82,12 +83,12 @@ def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None):
     if not parameters is None: pprint(parameters)
     t0 = time()
 
-    try:
-        grid_search.fit(X, y)
-    except Exception as e:
-        traceback.print_tb(sys.exc_info()[2])
-        print("ERROR:", e)
-        pdb.post_mortem()
+#     try:
+    grid_search.fit(X, y)
+#     except Exception as e:
+#         traceback.print_tb(sys.exc_info()[2])
+#         print("ERROR:", e)
+#         pdb.post_mortem()
         
     print("done in %0.3fs" % (time() - t0))
     print()
@@ -97,5 +98,9 @@ def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None):
     best_parameters = grid_search.best_estimator_.get_params()
     for param_name in sorted(parameters.keys()):
         print("\t%s: %r" % (param_name, best_parameters[param_name]))
-    
 
+def fitPrintPipe(pipe, X, y, scoring, cv, n_jobs, verbose=1, parameters = None):
+    grid_search = GridSearchCV(pipe, parameters, scoring = scoring, cv=cv,
+                           n_jobs=n_jobs, verbose=verbose)   
+    fitPrintGS(grid_search, X = X, y = y,
+            pipeline = pipe, parameters = parameters)

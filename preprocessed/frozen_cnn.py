@@ -6,8 +6,16 @@ Created on Jan 22, 2019
 preprocess img to create interesting features for classification by freezing first layer of a pretrained CNN.
 '''
 
-from keras.applications import VGG16
+from tensorflow.keras.applications import VGG16
+
+be careful with output size not to have to high dim (min 1000?) maybe a pca could help at the end
+
+
+
+
 #Load the VGG model
+
+# time to create a VGG
 vgg_conv = VGG16(weights='imagenet', include_top=False, input_shape=(image_size, image_size, 3))
 # Freeze the layers except the last 4 layers
 for layer in vgg_conv.layers[:-4]:

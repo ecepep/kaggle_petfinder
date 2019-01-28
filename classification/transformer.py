@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from scipy import sparse
+import re
+
 
 
 class DataFrameSelector(BaseEstimator, TransformerMixin):
@@ -38,6 +40,8 @@ class DataFrameSelector(BaseEstimator, TransformerMixin):
             return X_selected.values.ravel()
         return X_selected.values
     
+    
+    
 class StringConcat(BaseEstimator, TransformerMixin):
     '''
     concat several string features to a single string 
@@ -55,7 +59,9 @@ class StringConcat(BaseEstimator, TransformerMixin):
         return self.sep.join(s)
     
     def transform(self, X):
-        return X.apply(self._concat, axis = 1)
+        remove_sep = lambda s: re.sub(r"[^A-Za-z0-9]", "", s)
+        X = np.vectorize(remove_sep)(X)
+        return np.apply_along_axis(self._concat, axis = 1, arr = X)
         
 
 class FnanToStr(BaseEstimator, TransformerMixin):
@@ -89,6 +95,8 @@ class FnanToStr(BaseEstimator, TransformerMixin):
                 X[:, i] = FnanToStr.on_array(X[:, i])
             return X
         
+        
+        
 class Formater(BaseEstimator, TransformerMixin):
     '''
     Base for transformer to change format of X after transform in Pipe
@@ -103,13 +111,35 @@ class Formater(BaseEstimator, TransformerMixin):
     
 class ToSparse(Formater):
     def transform(self, X):
-        return sparse.csr_matrix(X) 
+        return sparse.csr_matrix(X)
+    
+class Reshape(Formater):
+    def __init__(self, shape = -1):
+        '''
+        :param shape: -1  to reduce dim of 1
+        '''
+        self.shape = shape
+    def transform(self, X):
+        return X.reshape(self.shape)
+    
+class Ravel(Formater):
+    '''
+    necessary before tf-idf or AttributeError: 'numpy.ndarray' object has no attribute 'apply'
+    '''
+    def _ravel(self, X):
+        if len(X.shape)==1: return X
+        elif X.shape[1] == 1: return X.ravel()
+        else: raise "unexpected Ravel()"
+    def transform(self, X):
+        return self._ravel(X) 
     
 class AsType(Formater):
     def __init__(self, astype):
         self.astype = astype
     def transform(self, X):
         return X.astype(self.astype)
+
+
 
 class PipeLabelEncoder(BaseEstimator, TransformerMixin):
     """
@@ -147,6 +177,8 @@ class PipeLabelEncoder(BaseEstimator, TransformerMixin):
             Xt[:,i] = np.vectorize(f)(Xt[:,i], mapping)
         return Xt
     
+    
+    
 class PipeOneHotEncoder(PipeLabelEncoder):
     """
     Extend PipeLabelEncoder to one hot
@@ -173,6 +205,7 @@ class PipeOneHotEncoder(PipeLabelEncoder):
                     XtOH[i, cumsum_len[ji]+Xt[i,ji]] = 1
         
         return XtOH
+    
     
     
 class InferNA(BaseEstimator, TransformerMixin):
