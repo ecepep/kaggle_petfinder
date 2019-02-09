@@ -3,6 +3,7 @@ Created on Jan 20, 2019
 
 @author: ppc
 
+@todo clean code, hardcoded path
 '''
 import json
 import glob, os
@@ -15,12 +16,19 @@ import matplotlib.pyplot as plt
 
 def _load_pet(dir, petId, index, printD=False):
     os.chdir(dir)
+    # method to slow while profiling, probably du to very high number of file in dir
+    print("issues with glob being slow @todo")
     files =  glob.glob(petId + "*") # each img as its own ggle api run, several img per animal
     if len(files) > index:
     # @warning: filename is not necessarily "-1"
-        filename = files[index] 
+        return files[index] 
     else: 
         return None
+
+def _load_pet_json(dir, petId, index, printD=False):
+    filename = _load_pet(dir, petId, index, printD)
+    if not filename: return None
+    
     with open(dir+filename) as json_file:  
         data = json.load(json_file)
         
@@ -50,7 +58,7 @@ def parse_metadata(x,dir_met):
         index = 1
         while (data is None): # search to find desired json and parse it
             try:
-                data = _load_pet(dir_met, petId, index)
+                data = _load_pet_json(dir_met, petId, index)
                 if data.get("labelAnnotations") is None: data = None # check if json is has expected
                 index += 1 # try for all json related to this pet until one match desired format else data = None
                 if index > 30: raise "index"
@@ -73,8 +81,6 @@ def parse_metadata(x,dir_met):
                 print("patience is a virtue")
                 print("petid", petId)
                 pdb.set_trace()
-#                 petId
-# 'dd4b67059'
 
         assert len(lad) ==  len(las),\
             "len, las " + str(len(las)) + "lad " + str(len(lad)) + ";json does not follow expected format"
@@ -105,140 +111,12 @@ def merge_metadata(dir_met, train, test):
     dess_test = pd.read_pickle(dir_met + "dess_test" + ".pkl")
     scores_test = pd.read_pickle(dir_met + "scores_test" + ".pkl")
     
-    train = pd.merge(train, dess_train, how='inner', on=['PetID', 'PetID'])
-    train = pd.merge(train, scores_train, how='inner', on=['PetID', 'PetID'])
-    test = pd.merge(test, dess_test, how='inner', on=['PetID', 'PetID'])
-    test = pd.merge(test, scores_test, how='inner', on=['PetID', 'PetID'])
+    train = pd.merge(train, dess_train, how='inner', on=['PetID'])
+    train = pd.merge(train, scores_train, how='inner', on=['PetID'])
+    test = pd.merge(test, dess_test, how='inner', on=['PetID'])
+    test = pd.merge(test, scores_test, how='inner', on=['PetID'])
     
     assert lenTr == train.shape[0], "pkl outdated train"
     assert lenTest == test.shape[0], "pkl outdated test"
     return train, test
-    
-    
-# 14098
-# >>> petId
-# '458e8f61c'
-# {
-#     "cropHintsAnnotation": {
-#         "cropHints": [
-#             {
-#                 "boundingPoly": {
-#                     "vertices": [
-#                         {},
-#                         {
-#                             "x": 202
-#                         },
-#                         {
-#                             "x": 202,
-#                             "y": 359
-#                         },
-#                         {
-#                             "y": 359
-#                         }
-#                     ]
-#                 },
-#                 "confidence": 0.79999995,
-#                 "importanceFraction": 1
-#             }
-#         ]
-#     },
-#     "imagePropertiesAnnotation": {
-#         "dominantColors": {
-#             "colors": [
-#                 {
-#                     "color": {
-#                         "blue": 203,
-#                         "green": 245,
-#                         "red": 251
-#                     },
-#                     "pixelFraction": 0.048006807,
-#                     "score": 0.16060464
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 13,
-#                         "green": 15,
-#                         "red": 18
-#                     },
-#                     "pixelFraction": 0.30262518,
-#                     "score": 0.05188811
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 30,
-#                         "green": 77,
-#                         "red": 121
-#                     },
-#                     "pixelFraction": 0.0070491005,
-#                     "score": 0.049773432
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 90,
-#                         "green": 119,
-#                         "red": 137
-#                     },
-#                     "pixelFraction": 0.011910549,
-#                     "score": 0.038003173
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 21,
-#                         "green": 57,
-#                         "red": 34
-#                     },
-#                     "pixelFraction": 0.004861449,
-#                     "score": 0.013653678
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 180,
-#                         "green": 241,
-#                         "red": 252
-#                     },
-#                     "pixelFraction": 0.028804084,
-#                     "score": 0.14307095
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 184,
-#                         "green": 250,
-#                         "red": 250
-#                     },
-#                     "pixelFraction": 0.010695187,
-#                     "score": 0.100757524
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 56,
-#                         "green": 103,
-#                         "red": 146
-#                     },
-#                     "pixelFraction": 0.007778318,
-#                     "score": 0.034790304
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 120,
-#                         "green": 150,
-#                         "red": 168
-#                     },
-#                     "pixelFraction": 0.01093826,
-#                     "score": 0.034108765
-#                 },
-#                 {
-#                     "color": {
-#                         "blue": 46,
-#                         "green": 47,
-#                         "red": 49
-#                     },
-#                     "pixelFraction": 0.15240642,
-#                     "score": 0.03251812
-#                 }
-#             ]
-#         }
-#     }
-# }
-# {'imagePropertiesAnnotation': {'dominantColors': {'colors': [{'color': {'red': 251, 'green': 245, 'blue': 203}, 'score': 0.16060464, 'pixelFraction': 0.048006807}, {'color': {'red': 18, 'green': 15, 'blue': 13}, 'score': 0.05188811, 'pixelFraction': 0.30262518}, {'color': {'red': 121, 'green': 77, 'blue': 30}, 'score': 0.049773432, 'pixelFraction': 0.0070491005}, {'color': {'red': 137, 'green': 119, 'blue': 90}, 'score': 0.038003173, 'pixelFraction': 0.011910549}, {'color': {'red': 34, 'green': 57, 'blue': 21}, 'score': 0.013653678, 'pixelFraction': 0.004861449}, {'color': {'red': 252, 'green': 241, 'blue': 180}, 'score': 0.14307095, 'pixelFraction': 0.028804084}, {'color': {'red': 250, 'green': 250, 'blue': 184}, 'score': 0.100757524, 'pixelFraction': 0.010695187}, {'color': {'red': 146, 'green': 103, 'blue': 56}, 'score': 0.034790304, 'pixelFraction': 0.007778318}, {'color': {'red': 168, 'green': 150, 'blue': 120}, 'score': 0.034108765, 'pixelFraction': 0.01093826}, {'color': {'red': 49, 'green': 47, 'blue': 46}, 'score': 0.03251812, 'pixelFraction': 0.15240642}]}}, 'cropHintsAnnotation': {'cropHints': [{'boundingPoly': {'vertices': [{}, {'x': 202}, {'x': 202, 'y': 359}, {'y': 359}]}, 'confidence': 0.79999995, 'importanceFraction': 1}]}}
-
     

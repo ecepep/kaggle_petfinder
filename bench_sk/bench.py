@@ -14,15 +14,8 @@ https://www.kaggle.com/fiancheto/petfinder-simple-lgbm-baseline-lb-0-399
 https://www.kaggle.com/jobs
 
 - try with gbt
-- clean code with everything in a pipeline
-- go to tf_test to use perceptron more extensively (optimized on kappa)
-- separate preprocessed from analysis
-- add more data: photo metadata, text, photo...
 - FIND alternate to one hot encode, fight curse of dim: regularization, 
 grouping color and breed, hashing tricks?, custom feat from (state-> dist to kuala or nb inhabitant)
-- train score very law for mlp (hidden: 100). Underfit or too much reg?
-
-- make a validation set before grid searching
 '''
 
 

@@ -5,8 +5,20 @@ Created on Jan 20, 2019
 
 parse metadatas' json for train and test petids and save it as a pd.dataframe in .pkl in /preprocessed/ + meta_dir
 '''
+
 from classification.util import getTrainTest2
 from preprocessed.metadata import parse_metadata
+
+
+# pd.options.mode.chained_assignment = 'raise'
+
+# def custom_warn(*args, **kwargs):
+#     raise "jkjkj" # for traceback
+#  
+# warnings.warn =  custom_warn
+
+
+
 pathToAll = "../all" # path to dataset dir
 pathToAll = "/home/ppc/Documents/eclipse-workspace/kaggle_petfinder/all"
 meta_dir = "/preprocessed/metadata_label/"

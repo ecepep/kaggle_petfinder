@@ -18,7 +18,7 @@ import re
 class DataFrameSelector(BaseEstimator, TransformerMixin):
     '''
     '''
-    def __init__(self, attribute_names, dtype=None, ravel = True):
+    def __init__(self, attribute_names, dtype=None, ravel = True, regex = False):
         '''
         
         :param attribute_names:
@@ -28,16 +28,23 @@ class DataFrameSelector(BaseEstimator, TransformerMixin):
         self.attribute_names = attribute_names
         self.dtype = dtype
         self.ravel = ravel
+        self.regex = regex
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
-        X_selected = X[self.attribute_names]
+        if self.regex:
+            X_selected = X.filter(regex=self.attribute_names)
+        else:
+            X_selected = X[self.attribute_names]
+            
         if self.dtype:
             return X_selected.astype(self.dtype).values
+        
         if self.ravel & (X_selected.shape[1] == 1):
             return X_selected.values.ravel()
+        
         return X_selected.values
     
     

@@ -5,13 +5,13 @@ Created on Jan 21, 2019
 
 list of pipelines to be tested in main_pipe
 
-
 @todo: 
 - meta_tfid features number = 9. wrong param of tfidf or unrelevant preprocessing/data?
 - feature for state (nb inhabitant?)
 - add rescuer to description (might be skipped by tf idf)
 - add colors and breeds to each other with weights
 - include metadata label scores
+- des_rescu_pipe
 
 '''
 from classification.transformer import PipeLabelEncoder, DataFrameSelector, InferNA, ToSparse, FnanToStr,\
@@ -25,6 +25,7 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 import tensorflow as tf
 from classification.custom_nn_ordered import CustomNNordered
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import PCA
 
 import copy
 from sklearn.decomposition.truncated_svd import TruncatedSVD
@@ -134,9 +135,18 @@ strip_accents='ascii', analyzer= "word", stop_words='english', norm = "l1", use_
 #             ('tfid_vect', TfidfVectorizer(max_df= 0.743, min_df=0.036, ngram_range=(1,4),\
 # strip_accents='ascii', analyzer= "word", stop_words='english', use_idf = True, norm = None))
 #         ])
+
 des_pipe_svd = Pipeline([
             ('des_pipe', des_pipe),
             ('SVD', TruncatedSVD(n_components=20)) #ValueError: n_components must be < n_features; got 140 >= 124
+        ])
+
+des_pipe_for_svd = copy.deepcopy(des_pipe)
+des_pipe_for_svd.named_steps.tfid_vect = TfidfVectorizer(ngram_range=(1,4),\
+strip_accents='ascii', analyzer= "word", stop_words='english', norm = "l1", use_idf = True)
+des_pipe_svd_v2 = Pipeline([
+            ('des_pipe_for_svd', des_pipe_for_svd),
+            ('SVD', TruncatedSVD(n_components=20))
         ])
 
 print("meta_label_simple_concat_pipe pipe, tfidf param set for mail classification @todo")
@@ -149,11 +159,24 @@ meta_label_simple_concat_pipe = Pipeline([
 strip_accents='ascii', analyzer= "word", stop_words = None, norm = "l1", use_idf = True)),
 ])
 
-# list of main base pipes
-# num_pipe, nom_pipe_label_encode, h_dim_nom_pipe_label_encode, low_dim_nom_pipe_oh, state_oh, des_pipe, des_pipe_svd, meta_label_simple_concat_pipe
+pipe_img = Pipeline([("sel_imgf", DataFrameSelector("imgf_[0-9]+", regex = True))])
+
+pipe_img_PCA = Pipeline([("sel_imgf", pipe_img),
+                         ("PCA", PCA(n_components=40))])
+
+n_extra = 10
+extra_dim = Pipeline([ 
+    ('extra_dim', FeatureUnion([
+         ('sel_rn'+str(i), DataFrameSelector(["rn"], ravel = False))
+    for i in range(0, n_extra)]))
+    ])
+
+
 ##############################################################################
 # pipes for random forest
 ##############################################################################
+
+# most basic pipe for reference, gives decent result ~0.340
 pipe_rdf = Pipeline([
     ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
 #     , transformer_weights=None
@@ -163,6 +186,50 @@ pipe_rdf = Pipeline([
     ])),
     ('clf', RandomForestClassifier(n_estimators = 200)),
 ])
+
+# supposed to give 0
+pipe_rn_cmp = Pipeline([
+    ('sel_rn', DataFrameSelector(["rn"], ravel = False)),
+    ('clf', RandomForestClassifier(n_estimators = 200)),
+])
+
+pipe_rdf_extra_dim = Pipeline([
+    ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
+#     , transformer_weights=None
+    ('u_prep', FeatureUnion([
+        ('num_pipe', num_pipe),
+        ('nom_pipe_label_encode', nom_pipe_label_encode),
+        ("extra_dim", extra_dim),
+    ])),
+    ('clf', RandomForestClassifier(n_estimators = 200)),
+]) 
+
+pipe_rdf_img_only = pipe_rdf_extra_dim = Pipeline([
+    ("pipe_img", pipe_img),
+    ('clf', RandomForestClassifier(n_estimators = 200)),
+]) 
+
+pipe_rdf_img = pipe_rdf_extra_dim = Pipeline([
+    ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
+#     , transformer_weights=None
+    ('u_prep', FeatureUnion([
+        ('num_pipe', num_pipe),
+        ('nom_pipe_label_encode', nom_pipe_label_encode),
+        ("pipe_img", pipe_img)
+    ])),
+    ('clf', RandomForestClassifier(n_estimators = 200)),
+]) 
+
+pipe_rdf_img_PCA = pipe_rdf_extra_dim = Pipeline([
+    ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
+#     , transformer_weights=None
+    ('u_prep', FeatureUnion([
+        ('num_pipe', num_pipe),
+        ('nom_pipe_label_encode', nom_pipe_label_encode),
+        ("pipe_img_PCA", pipe_img_PCA)
+    ])),
+    ('clf', RandomForestClassifier(n_estimators = 200)),
+]) 
 
 # add desccription features 
 pipe_rdf_des = Pipeline([
@@ -176,13 +243,21 @@ pipe_rdf_des = Pipeline([
     ('clf', RandomForestClassifier(n_estimators = 300)),
 ])
 
-pipe_rdf_des_svd = Pipeline([
+# only the description
+pipe_rdf_des_only = Pipeline([
+    ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
+    ('des_pipe', des_pipe),
+    ('clf', RandomForestClassifier(n_estimators = 300)),
+])
+
+
+pipe_rdf_des_svd_v2 = Pipeline([
     ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
 #     , transformer_weights=None
     ('u_prep', FeatureUnion([
         ('num_pipe', num_pipe_sparse),
         ('nom_pipe_label_encode', nom_pipe_label_encode_sparse),
-        ('des_pipe_svd', des_pipe_svd)
+        ('des_pipe_svd_v2', des_pipe_svd_v2)
     ])),
     ('clf', RandomForestClassifier(n_estimators = 300)),
 ])
@@ -213,8 +288,12 @@ pipe_rdf_low_dim_only.named_steps.u_prep.transformer_list[1] = \
 # pipes for mlp
 ##############################################################################
 
-epoch =  500 # 1, 500
-if epoch == 1: print("epoch == 1; debugging")
+epoch =  1 # 1, 500
+if epoch == 1: print("epoch == 1; debugging for mlp")
+
+basicNN = CustomNNCategorical(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
+                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
+                                epoch = epoch)
 
 pipe_mlp = Pipeline([
     ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
@@ -222,9 +301,7 @@ pipe_mlp = Pipeline([
         ('num_pipe', num_pipe),
         ('nom_pipe_label_encode_scale', nom_pipe_label_encode_scale)
     ])),
-    ('clf', CustomNNCategorical(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
-                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
-                                epoch = epoch))
+    ('clf', copy.deepcopy(basicNN))
 ])
 
 pipe_mlp_low_dim_only = Pipeline([
@@ -233,9 +310,7 @@ pipe_mlp_low_dim_only = Pipeline([
         ('num_pipe', num_pipe),
         ('nom_pipe_label_encode_low_dim_scale', nom_pipe_label_encode_low_dim_scale)
     ])),
-    ('clf', CustomNNCategorical(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
-                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
-                                epoch = epoch))
+    ('clf', copy.deepcopy(basicNN))
 ])
 
 pipe_mlp_oh = copy.deepcopy(pipe_mlp)
@@ -253,9 +328,7 @@ pipe_mlp_oh_des_svd = Pipeline([
         ("low_dim_nom_pipe_oh", low_dim_nom_pipe_oh),
         ('des_pipe_svd', des_pipe_svd),
     ])),
-    ('clf', CustomNNCategorical(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
-                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
-                                epoch = epoch))
+    ('clf', copy.deepcopy(basicNN))
 ])
 
 pipe_mlp_oh_des = copy.deepcopy(pipe_mlp_oh_des_svd)
@@ -268,10 +341,24 @@ pipe_mlp_oh_des_svd_meta = Pipeline([
         ("low_dim_nom_pipe_oh", low_dim_nom_pipe_oh),
         ('des_pipe_svd', des_pipe_svd),
     ])),
-    ('clf', CustomNNCategorical(hidden = [400, 200, 100, 50, 20], dropout = [0.3,0.2,0.1], 
-                                reg = [0.01,0.005,0.001], h_act = [tf.nn.relu],
-                                epoch = epoch))
+    ('clf', copy.deepcopy(basicNN))
 ])
+
+pipe_mlp_img_only = pipe_rdf_extra_dim = Pipeline([
+    ("pipe_img", pipe_img),
+    ('clf', copy.deepcopy(basicNN)),
+]) 
+
+pipe_mlp_oh_img = copy.deepcopy(pipe_mlp_oh)
+pipe_mlp_oh_img.named_steps.u_prep.transformer_list.append(("pipe_img", pipe_img))
+
+pipe_mlp_oh_img_PCA = copy.deepcopy(pipe_mlp_oh)
+pipe_mlp_oh_img_PCA.named_steps.u_prep.transformer_list.append(("pipe_img_PCA", pipe_img_PCA))
+
+pipe_mlp_oh_des_img_PCA = copy.deepcopy(pipe_mlp_oh_des)
+pipe_mlp_oh_des_img_PCA.named_steps.u_prep.transformer_list.append(("pipe_img_PCA", pipe_img_PCA))
+        
+
 
 def toOrderedMlp(pipeWithCat):
     '''

@@ -6,49 +6,42 @@ Created on Jan 14, 2019
 main_pipe allow to run and assess the different pipelines
 
 
-@todo 
-- make a human readable output to save result of previously executed run with param
+@todo with rdf compare low dim only, with != low dim feat def
+@todo test mlp img, imgpca, imgpcades
 
+@todo 
+- @see pipelines todos
+- make a human readable output to save result of previously executed run with param
 - ask on stacko comprehension list func scope
 - @see bench and tf_test todos
 - dir paths' hard coded
      
 '''
 
-from classification.util import getTrainTest2, quadratic_cohen_kappa_score,\
- check_generalization, printCatGen, fitPrintGS, fitPrintPipe
+from classification.util import quadratic_cohen_kappa_score,\
+    fitPrintPipe, getTrainTest2_meta_img_rn, get_from_pkl
 
 import sys
 
 from sklearn.metrics.scorer import make_scorer
 from sklearn.model_selection._split import ShuffleSplit
-from sklearn.model_selection._search import GridSearchCV
 
 from multiprocessing import cpu_count
 import warnings
 import copy
-
-
-# pd.options.mode.chained_assignment = 'raise'
-
-# def custom_warn(*args, **kwargs):
-#     raise "jkjkj" # for traceback
-#  
-# warnings.warn =  custom_warn
+import numpy as np
 
 #################################################################"
 #definition of all pipelines
 from classification.pipelines import *
-from preprocessed.metadata import merge_metadata
 #################################################################"
 
 pathToAll = "../all" # path to dataset dir
-meta_dir = pathToAll + "/preprocessed/metadata_label/"
-# read train, test csvs, set unknown to NA and shuffle
-train, test = getTrainTest2(pathToAll)
-# add features preprocessed from metadata dir :see preprocessed/prep_metadata
-train, test = merge_metadata(meta_dir, train, test)
+# train, test = getTrainTest2_meta_img_rn(pathToAll)
+train, test = get_from_pkl(pathToAll, v = "getTrainTest2_meta_img_rn")
 
+
+# multiprocessing requires the fork to happen in a __main__ protected
 if __name__ == "__main__":
 ##############################################################################
 # random forest
@@ -56,76 +49,83 @@ if __name__ == "__main__":
     parameters = {
 #          'clf__n_estimators': (200, 350), # high influence. 100: kappa ==> 0.340, 200 ==> 0.386, 200>300
 # ValueError: n_components must be < n_features; got 140 >= 124
-#         'u_prep__des_pipe_svd__SVD__n_components': (15, 25),
+        'u_prep__des_pipe_svd_v2__SVD__n_components': (25,50,100),
 #         'u_prep__des_pipe__tfid_vect__max_df': (0.7, 0.743, 0.775),
 #         'clf__min_samples_leaf': (1, 5, 10, 30,) # . 1 lower better
 #         "clf__max_features":("sqrt", "log2", 2,3,4,5,6) # auto = sqrt, seems fine
+#         "u_prep__pipe_img_PCA__PCA__n_components":(10,20,30,40,50,70,100,200) # pipe_rdf_img_PCA
     }
-    # multiprocessing requires the fork to happen in a __main__ protected
-    n_cpu = cpu_count()-1 #  1   cpu_count()-1
-#     n_cpu = 1
-    if n_cpu == 1: print("debug no multithread")
-    else: print("using multithreading, bad for debug")
-    cv_gs = ShuffleSplit(n_splits=1, test_size=0.2, random_state=None)
-    cv_gs = 3 # strat cross-val
-
+    
+    DEBUG = False
+    if DEBUG:
+        n_cpu = 1
+        cv_gs = ShuffleSplit(n_splits=1, test_size=0.3, random_state=None) # for testing
+        print("DEBUG no multithread, no cv")
+    else:
+        n_cpu = cpu_count()-1 #  1   cpu_count()-1
+        cv_gs = 3 # strat cross-val # necessary
+    
     qwk_scorer = make_scorer(quadratic_cohen_kappa_score)
-    
-#     print("pipe_rdf_oh____________________________________________________")
-#     fitPrintPipe(pipe_rdf_oh, X = train, y = train["AdoptionSpeed"], 
-#                  scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-#     print("pipe_rdf_des_svd____________________________________________________")
-#     fitPrintPipe(pipe_rdf_des_svd, X = train, y = train["AdoptionSpeed"], 
-#                  scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
+      
+    pipe = {
+# #         "pipe_rn_cmp":pipe_rn_cmp, 
+#         "pipe_rdf":pipe_rdf, 
+#         "pipe_rdf_extra_dim":pipe_rdf_extra_dim, # show extra rn dim influence
+#         "pipe_rdf_img_only":pipe_rdf_img_only, 
+#         "pipe_rdf_img":pipe_rdf_img, 
+#         "pipe_rdf_img_PCA":pipe_rdf_img_PCA, 
+        
+#         "pipe_rdf_oh":pipe_rdf_oh, 
+#         "pipe_rdf_des_svd":pipe_rdf_des_svd, 
+        "pipe_rdf_des_svd_v2": pipe_rdf_des_svd_v2,
+#         "pipe_rdf_des_svd_meta":pipe_rdf_des_svd_meta,
+#         "pipe_rdf_low_dim_only":pipe_rdf_low_dim_only, 
+#         "pipe_rdf_des":pipe_rdf_des,
+#         "pipe_rdf_des_only":pipe_rdf_des_only,
 
-#     print("pipe_rdf_des_svd_meta____________________________________________________")
-#     fitPrintPipe(pipe_rdf_des_svd_meta, X = train, y = train["AdoptionSpeed"], 
-#                  scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-
-    
-#     print("pipe_rdf____________________________________________________")
-#     fitPrintPipe(pipe_rdf, X = train, y = train["AdoptionSpeed"], 
-#                  scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-#     print("pipe_rdf_low_dim_only____________________________________________________")
-#     fitPrintPipe(pipe_rdf_low_dim_only, X = train, y = train["AdoptionSpeed"], 
-#                  scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-#     print("pipe_rdf_des____________________________________________________")
-#     fitPrintPipe(pipe_rdf_des, X = train, y = train["AdoptionSpeed"], 
-#                  scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-
-
+    }
+    for p in pipe.keys():
+        print("_ " + p + "______________________________________________")
+        fitPrintPipe(pipe[p], X = train, y = train["AdoptionSpeed"], 
+                     scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
+             
+    raise "later"
 ##############################################################################
 # Custom MLP categorical_crossentropy and ordered with binary crossentropy
 #############################################################################
-    res_path = None
-    res_path = pathToAll + "/result/mlp"
+    raise "implement epoch print"
+    
+    if DEBUG:
+        res_path = None
+    else:
+        res_path = pathToAll + "/result/mlp"
+    
     if res_path:
         print("res_path", res_path)
         sys.stdout = open(res_path, 'w') # console output to file
     
-    n_cpu = 1 # mutlithreaded already implemented through keras
+    n_cpu = 1 # mutlithreading already implemented through keras
     parameters = {}
-    print("pipe_mlp ____________________________________________________")
-    fitPrintPipe(pipe_mlp, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-    print("pipe_mlp_low_dim_only ____________________________________________________")
-    fitPrintPipe(pipe_mlp_low_dim_only, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-    print("pipe_mlp_oh ____________________________________________________")
-    fitPrintPipe(pipe_mlp_oh, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-    print("pipe_mlp_oh_deeper ____________________________________________________")
-    fitPrintPipe(pipe_mlp_oh_wider, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-    print("pipe_mlp_oh_des ___________________________________________________")
-    fitPrintPipe(pipe_mlp_oh_des, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-    print("pipe_mlp_oh_des_svd ____________________________________________________")
-    fitPrintPipe(pipe_mlp_oh_des_svd, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-    print("pipe_mlp_oh_des_svd_meta ____________________________________________________")
-    fitPrintPipe(pipe_mlp_oh_des_svd_meta, X = train, y = train["AdoptionSpeed"], 
-                 scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
+
+    pipe = {
+        #         "pipe_mlp":pipe_mlp, 
+#         "pipe_mlp_low_dim_only":pipe_mlp_low_dim_only, 
+#         "pipe_mlp_oh":pipe_mlp_oh,
+#         "pipe_mlp_oh_des":pipe_mlp_oh_des, 
+        "pipe_mlp_img_only":pipe_mlp_img_only, 
+        "pipe_mlp_oh_img":pipe_mlp_oh_img, 
+        "pipe_mlp_oh_img_PCA":pipe_mlp_oh_img_PCA, 
+        "pipe_mlp_oh_des_img_PCA":pipe_mlp_oh_des_img_PCA, 
+#         "pipe_mlp_oh_wider":pipe_mlp_oh_wider, 
+#         "pipe_mlp_oh_des_svd":pipe_mlp_oh_des_svd,
+#         "pipe_mlp_oh_des_svd_meta":pipe_mlp_oh_des_svd_meta
+    }
+    for p in pipe.keys():
+        print("_ " + p + "______________________________________________")
+#         fitPrintPipe(pipe[p], X = train, y = train["AdoptionSpeed"], 
+#                      scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
+    
+    
 
 ##############################################################################
 # check generalization 
@@ -146,6 +146,36 @@ if __name__ == "__main__":
 ############################################################################"
 # run result and conclusions
 ############################################################################"
+
+"""
+Gridsearch on pipe_rdf_img_PCA's PCA n_components
+_ pipe_rdf_img_PCA______________________________________________
+parameters:
+{'u_prep__pipe_img_PCA__PCA__n_components': (10, 20, 30, 40, 50, 70, 100, 200)}
+Best score: 0.319
+Best parameters set:
+    u_prep__pipe_img_PCA__PCA__n_components: 10
+
+"pipe_rdf":340 > "pipe_rdf_img_PCA":319 (10extra dim)
+ > "pipe_rdf_img_PCA":299 (50extra dim) ~~ "pipe_rdf_extra_dim":303 (10 extra dim) 
+
+# when plotted explained variance against n_components gives a ~log. 
+With n_cpnts = 50 ==> explain ~~80%; 10=>45%; 20=>60%, 30=>70%
+"""
+
+
+"""
+Testing pipe for preprocessed img with cv = 3, PCA(n_comp = 50)
+
+"pipe_rdf":335 > "pipe_rdf_img_PCA":299 (50extra dim) ~~ "pipe_rdf_extra_dim":303 (10 extra) 
+"pipe_rdf_img":262 (1000 extra) >"pipe_rdf_img_only":152
+
+(for cmp: pipe_rdf_des_only 0.213)
+
+Conclusion:
+As expected, img have some info but kills dim
+"""
+
 
 """
 res for several != mlp in cv = 3, svd =20
@@ -185,6 +215,8 @@ Best score: 0.295
 pipe_mlp 317 > pipe_mlp_oh_des_svd_meta 295 ~ pipe_mlp_oh_des 294 >
 pipe_mlp_oh_des_svd 288 ~ pipe_mlp_oh 287 > pipe_mlp_oh_deeper 273 > pipe_mlp_low_dim_only 0.209
 
+Du to variance of result, > can be questionable
+
 Conclusion:
 pipe_mlp_oh > pipe_mlp_low_dim_only => for low dim, oh still works better with mlp
 pipe_mlp_oh 287 > pipe_mlp_oh_deeper 273 => wider mlp can't train
@@ -193,7 +225,6 @@ pipe_mlp_oh_des_svd_meta 295 ~ pipe_mlp_oh_des 294 => meta is maybe slightly int
 pipe_mlp >> everything: always dim issues and/or importance of high dim features state and rescuer 
 @todo add labelencoded high dim as a features and compare to pipe_mlp
 @todo always print epoch for mlp
-@todo test if cv = 1 is precise enough (computation time)
 @todo compare each to rdf 
 """
 
@@ -228,6 +259,8 @@ still worse than des without svd, or dropping des BUT n_component 10 < 20??
 
 """
  
+
+
 """
 running on several rdf pipes with cv = 3 and param n_estimators = 200 or 300, svd n component = 100 (wrong)
 pipe_rdf_oh____________________________________________________
@@ -255,19 +288,39 @@ pipe_rdf_des____________________________________________________
 done in 360.286s
 Best score: 0.373
     clf__n_estimators: 350
- 
+ _ pipe_rdf_des_only______________________________________________
+Best score: 0.213
+    clf__n_estimators: 200
+
 ____________   
 conclusion:
-pipe_rdf_des 373 > pipe_rdf 352 > pipe_rdf_des_svd 316 > pipe_rdf_low_dim_only 307 > pipe_rdf_des_svd_meta 294 > pipe_rdf_oh 291
+pipe_rdf_des 373 > pipe_rdf 352 > pipe_rdf_des_svd 316 > pipe_rdf_low_dim_only 307 > 
+pipe_rdf_des_svd_meta 294 > pipe_rdf_oh 291 > pipe_rdf_des_only 213
+
 know high dim?
 true: pipe_rdf, pipe_rdf_des_svd, pipe_rdf_des_svd_meta, pipe_rdf_des
-false: pipe_rdf_low_dim_only, pipe_rdf_oh
+false: pipe_rdf_low_dim_only, pipe_rdf_oh pipe_rdf_des_only
 
 pipe_rdf_low_dim_only >  pipe_rdf_oh: for trees o-h lower scores du to dimension issues.
 problem of behaviour in higher dimension overall => same info with more dim lower result significatively
 pipe_rdf >> pipe_rdf_low_dim_only: high dimension feats help a lot if as label!!!
 pipe_rdf_des > pipe_rdf: des very usefull but shouldn't it curse dim? (or "only" ~~124 extra dim?)
 pipe_rdf_des > pipe_rdf_des_svd: SVD actually worsening problem => normal with ncomponent = 100 see comment above
+
+"""
+
+"""
+testing result of pipe_rdf variance 
+other 11 shuffle split 0.7-0.3
+scores: 0.343, 0.307, 0.346, 0.362, 0.333, 0.341, 0.345, 0.333, 0.345, 0.326, 0.349
+std = 0.013601166697647297 mean = 0.33909090909090905
+0.307 0.362
+
+other 11 cv = 3
+scores: 0.348, 0.338, 0.346, 0.348, 0.341, 0.336, 0.338, 0.343, 0.344, 0.344, 0.342
+std = 0.003846217418419286 mean = 0.34254545454545454
+0.338 0.348
+==> cv 3 necessary
 """
 
 """
@@ -283,8 +336,6 @@ Best score: 0.280
 """
 
 
-
- 
 """
 easy overfit with nom_pipe_label_encode_scale feat (too high variance)
 cat
