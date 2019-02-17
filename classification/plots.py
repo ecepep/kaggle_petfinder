@@ -13,7 +13,7 @@ import cProfile
    
 pathToAll = "../all" # path to dataset dir
 
-train, test = getTrainTest2_meta_img_rn(pathToAll)
+# train, test = getTrainTest2_meta_img_rn(pathToAll)
 train, test = get_from_pkl(pathToAll, v = "getTrainTest2_meta_img_rn")
 
 

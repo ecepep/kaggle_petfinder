@@ -5,10 +5,12 @@ https://github.com/JHart96/keras_ordinal_categorical_crossentropy
 @note: Does not seem to improve result (ill thought?, bugged? or just equivalent?)
 
 @see tf_mvp.py comment about loss for truly intersting approach
+
+@todo read papers on loss for kappa_quadratic
 '''
 
-from tensorflow.keras import backend
-from tensorflow.keras import losses
+from keras import backend
+from keras import losses
 
 def lossOCC(y_true, y_pred):
     weights = backend.cast(backend.abs(backend.argmax(y_true, axis=1) - backend.argmax(y_pred, axis=1))/(backend.int_shape(y_pred)[1] - 1), dtype='float32')
@@ -22,3 +24,6 @@ def lossOCCQuadratic(y_true, y_pred):
     '''
     weights = backend.cast(backend.square(backend.argmax(y_true, axis=1) - backend.argmax(y_pred, axis=1))/(backend.int_shape(y_pred)[1] - 1), dtype='float32')
     return (1.0 + weights) * losses.categorical_crossentropy(y_true, y_pred)
+
+
+

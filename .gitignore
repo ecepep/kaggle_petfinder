@@ -6,6 +6,7 @@ all/
 paper/*
 **/**/*.pdf
 **/*.pdf
+!README
 !bench_sk/*.py
 !tf_test/*.py
 !NN_loss/*.py

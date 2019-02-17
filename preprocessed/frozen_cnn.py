@@ -8,17 +8,15 @@ Created on Jan 22, 2019
 preprocess img to create interesting features for classification by freezing first layer of a pretrained CNN ("imagenet").
 '''
  
-from tensorflow.keras.applications import VGG16
-
-
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras import optimizers
-from tensorflow.python.keras.models import Sequential
+from keras.applications import VGG16
+from keras.layers import Dropout
+from keras import optimizers
+from keras.models import Sequential
+from keras import backend
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from scipy.misc.pilutil import imresize
-from tensorflow.keras import backend
 import sys
 from time import sleep
 import numpy as np
@@ -90,7 +88,6 @@ class FrozenCnn():
 #     #             sleep(3)
 
         prediction = self.model.predict(np.array(image_resized))
-        
 #         backend.clear_session() # (was) necessary to avoid memory leakage
         return prediction
            

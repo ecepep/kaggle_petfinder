@@ -7,11 +7,13 @@ Transformer for preprocessed
 To use in a pipeline
 '''
 
+import sys
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from scipy import sparse
 import re
+from traceback import print_tb
 
 
 
@@ -116,6 +118,23 @@ class Formater(BaseEstimator, TransformerMixin):
     def transform(self, X):
         return X 
     
+class Multiplier(Formater):
+    def __init__(self, factor):
+        self.factor = factor
+    def transform(self, X):
+        return X * self.factor
+    
+class DimPrinter(Formater):
+    def __init__(self, extra = None):
+        self.extra = extra
+        self.printOnce = True
+    def transform(self, X):
+        if self.printOnce:
+            if self.extra: print(self.extra)
+            print("X dim print", X.shape)
+            self.printOnce = False
+        return X
+    
 class ToSparse(Formater):
     def transform(self, X):
         return sparse.csr_matrix(X)
@@ -157,7 +176,7 @@ class PipeLabelEncoder(BaseEstimator, TransformerMixin):
         
     LabelEncode all column of Xt, ignores y
     """
-    def __init__(self, silent = False):
+    def __init__(self, silent = True):
         self.values = list()
         super().__init__()
         self.labels = []
@@ -173,7 +192,7 @@ class PipeLabelEncoder(BaseEstimator, TransformerMixin):
         for i in range(0, Xt.shape[1]):
             # Test set might have values yet unknown to the classifiers
             unknown = np.setdiff1d(np.unique(Xt[:,i]), self.labels[i], assume_unique=True)
-            if (len(unknown) > 0) & (not self.silent) : print(len(unknown), "unknown labels found.")
+            if (len(unknown) > 0) and (not self.silent) : print(len(unknown), "unknown labels found.")
             
             uValues = np.append(self.labels[i], unknown)
             # all unknown values will take the same extra label
@@ -192,8 +211,8 @@ class PipeOneHotEncoder(PipeLabelEncoder):
     :warning not using sparse matrix, but np 2D
     OneHotEncode all column of Xt, ignores y
     """
-    def __init__(self, silent = False):
-        PipeLabelEncoder.__init__(self, silent = False)
+    def __init__(self, silent = True):
+        PipeLabelEncoder.__init__(self, silent = silent)
     
     def fit(self, Xt, y=None):
         PipeLabelEncoder.fit(self, Xt, y)

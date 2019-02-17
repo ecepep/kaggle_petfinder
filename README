@@ -1,0 +1,16 @@
+This project implement  a classification prediction for the kaggle competition "petfinder adoption prediction": https://www.kaggle.com/c/petfinder-adoption-prediction using python 3, keras, scikit.
+
+The is ordered as such:
+
+/classification
+	main dir. Including code with scikit's pipelines definition (@see pipelines.py), run (@see main_pipe.py), custom transformer and NN classifier.
+
+/preprocessed
+	dir for preprocessed features. Preprocess some extra features to be merge to dataset. Include metadata from Google API. Transfer of a pretrained CNN on the images. Translation of description.
+
+/tf_test
+	outdated. Rapid hand on with keras.
+
+/sk_bench
+	outdated. Rapid hand on with the project.
+

@@ -9,16 +9,16 @@ Created on Jan 22, 2019
 
 '''
 
-import cProfile
-
 from preprocessed.frozen_cnn import FrozenCnn
 from preprocessed.metadata import _load_pet
-from tensorflow.keras.applications import VGG16
+
+from keras.applications import VGG16
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import pandas as pd
 import glob, os
+import cProfile
 from time import sleep, time
 
 
