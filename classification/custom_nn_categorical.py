@@ -78,10 +78,16 @@ class CustomNNCategorical(CustomNNBase):
         self.smooth_cb = smooth_cb
         
         
-        raise add a reduce lr on loss increase
         self.cbReduceLR = ReduceLROnPlateau(
             monitor='loss', factor=0.8, patience=3,
             verbose=0, mode='auto', min_delta=0.0001, cooldown=0, min_lr=0)
+        
+#         self.cbReduceLR = ReduceLROnPlateau(monitor='loss', factor=0.5,
+#                               patience=4, min_lr=0.000001, verbose=0)
+        
+#         ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+#                               patience=2, min_lr=0.000001, verbose=0)
+#
         
         self.kappa_weights = kappa_weights
         if len(self.metrics) > 1 : raise "nope"
@@ -202,8 +208,9 @@ class CustomNNCategorical(CustomNNBase):
                     if not self.smooth_cb:
                         monitor = "cohen_kappa"
                     else: raise "No cohen_kappa_smoothed"
+                print("monitor", monitor)
                 self.cbEarly = EarlyStopping(
-                                    monitor='val_cohen_kappa' if self.validation else "cohen_kappa",
+                                    monitor = monitor if self.validation else "cohen_kappa",
                                     min_delta=0.00000001, patience=self.patience, # a large patience is necessary!
                                     verbose=0, mode='max', restore_best_weights=True)
             
@@ -215,7 +222,7 @@ class CustomNNCategorical(CustomNNBase):
                 y_val = self.__category_to_output(self.validation[1])
             elif not self.validation is None: raise "unknown validation type"
             
-            self.validation = None
+#             self.validation = None # can slightly reduce computation but need val_loss for callback LRReduceOnPlateau 
 
             self.kappa_logger = Cohen_kappa_logger(
                  output_to_category=self.__output_to_category,
@@ -268,6 +275,7 @@ class CustomNNCategorical(CustomNNBase):
         :return plt , to avoid carbage collection and closing of the windows
         '''
         history = self.history
+        plot = (saving_file is None)
 #         print("History acc", history.history['acc'])
 #         print("History loss", history.history['loss'])
 #         print("History lr", history.history['lr'])
@@ -275,8 +283,8 @@ class CustomNNCategorical(CustomNNBase):
 
         import matplotlib.pyplot as plt
         
-        plt.ion()
-        plt.show()
+        if plot: plt.ion()
+        if plot: plt.show()
 
         fig = plt.figure()
         plt.grid(True)
@@ -286,23 +294,23 @@ class CustomNNCategorical(CustomNNBase):
             plt.subplot(221)
             plt.plot(history.history[self.metric_plot])
             plt.ylabel(self.metric_plot + "  ")
-            plt.draw()
+            if plot: plt.draw()
         
         if "val_" + self.metric_plot in history.history.keys():
             plt.subplot(222)
     #         print("possible plot", history.history.keys())
             plt.plot(history.history["val_" + self.metric_plot])
             plt.ylabel("val_" + self.metric_plot + "  ")
-            plt.draw()
+            if plot: plt.draw()
     
-            if True: 
+            if False: 
                 print("self.patience last epochs")
                 print(history.history["val_" + self.metric_plot][-(self.patience+1):])            
         
         plt.subplot(223)
         plt.plot(history.history['loss'])
         plt.ylabel('"loss" ' + "  " + plotname)
-        plt.draw()
+        if plot: plt.draw()
         
         plt.subplot(224)
         if "val_cohen_kappa_smoothed" in history.history.keys():
@@ -311,12 +319,13 @@ class CustomNNCategorical(CustomNNBase):
         else:
             plt.plot(history.history['lr'])
             plt.ylabel('"lr"' + "  " + plotname)
-        plt.draw()
-        plt.pause(1)
+        if plot: plt.draw()
+        if plot: plt.pause(1)
 
         if saving_file:
             fig.savefig(saving_file)
-       
+            plt = None # send to carbage
+                      
         return plt
        
     

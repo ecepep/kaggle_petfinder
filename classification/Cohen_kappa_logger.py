@@ -24,7 +24,7 @@ class Cohen_kappa_logger(Callback):
                  X_train = None, y_train = None, 
                  X_val = None, y_val = None, 
                  kappa_weights = "quadratic",
-                 smooth_window = 3):
+                 smooth_window = 5):
         '''
         
         :param output_to_category:
@@ -42,6 +42,7 @@ class Cohen_kappa_logger(Callback):
         self.y_train = y_train
         self.kappa_weights = kappa_weights
         self.smooth_window = smooth_window
+        if X_val is None: raise 'implement none X_val COhen kappa logger'
         
 
     def on_epoch_end(self, epoch, logs={}):

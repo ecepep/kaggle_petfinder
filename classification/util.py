@@ -24,6 +24,7 @@ from copy import deepcopy
 from classification.transformer import DimPrinter
 from pdb import set_trace
 import numpy as np
+from sklearn.utils.deprecation import DeprecationDict
 
 
 def getTrainTest2(pathToAll = "../", silent = True):
@@ -140,7 +141,7 @@ def printCatGen(gen, hist = False, plotname = "NN", saving_file = None):
         plot = clf.plot_history(plotname = plotname, saving_file = saving_file)
         return plot
 
-def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None):
+def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None, verboseP = 3):
     '''
     fit the grid search with x and y and print info about it
     :param grid_search:
@@ -149,29 +150,57 @@ def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None):
     :param pipeline: of the grid search
     :param parameters: of the grid search
     '''
-    if not pipeline is  None: print("pipeline:", [name for name, _ in pipeline.steps])
-    if not parameters is None: print("parameters:")
-    if not parameters is None: pprint(parameters)
+#     if not pipeline is  None: print("pipeline:", [name for name, _ in pipeline.steps])
+#     if not parameters is None: print("parameters:")
+#     if not parameters is None: pprint(parameters)
     t0 = time()
-
 #     try:
     grid_search.fit(X, y)
 #     except Exception as e:
 #         traceback.print_tb(sys.exc_info()[2])
 #         print("ERROR:", e)
 #         pdb.post_mortem()
-        
-    print("done in %0.3fs" % (time() - t0))
-    print()
+    
+    if verboseP >= 2:
+        print(grid_search.cv_results_["params"])
+        for i in range(0, grid_search.n_splits_):
+            if verboseP >= 3:
+                print(str(i) + " train", grid_search.cv_results_["split"+str(i)+"_train_score"])
+            print(str(i) + " test ", grid_search.cv_results_["split"+str(i)+"_test_score"])
+        print("done in %0.3fs" % (time() - t0))
+                
+    if verboseP >= 1:
+        print("Best score: %0.3f" % grid_search.best_score_)
+        best_parameters = grid_search.best_estimator_.get_params()
+        for param_name in sorted(parameters.keys()):
+            print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
-    print("Best score: %0.3f" % grid_search.best_score_)
-    best_parameters = grid_search.best_estimator_.get_params()
-    for param_name in sorted(parameters.keys()):
-        print("\t%s: %r" % (param_name, best_parameters[param_name]))
-
-def fitPrintPipe(pipe, X, y, scoring, cv, n_jobs, verbose=1, parameters = None):
-    grid_search = GridSearchCV(pipe, parameters, scoring = scoring, cv=cv,
-                           n_jobs=n_jobs, verbose=verbose)   
-    fitPrintGS(grid_search, X = X, y = y,
-            pipeline = pipe, parameters = parameters)
+def fitPrintPipe(pipe, X, y, scoring, cv, n_jobs, verbose=1, parameters = None, verboseP = 4):
+    '''
+    
+    :param pipe:
+    :param X:
+    :param y:
+    :param scoring:
+    :param cv:
+    :param n_jobs:
+    :param verbose:
+        - 0 nothing
+        - 1 nb fit and fold + total time
+        - 2 time for each
+        - 3 score and time for each
+    :param parameters:
+    :param verboseP:
+         - 0 nothing
+         - 1 best score and avg
+         - 2 all test score
+         - 3 all train and test
+         - 4 print X dim before clf
+    '''
+    if verboseP>=4:
+        pipe.steps = pipe.steps[:-1] + [("dim_print", DimPrinter())] + pipe.steps[-1:] # add a print of X dimension
+    grid_search = GridSearchCV(pipe, parameters, scoring = scoring, cv=cv,n_jobs=n_jobs,
+                            verbose=verbose, return_train_score = True)                              
+    fitPrintGS(grid_search, X = X, y = y, verboseP = verboseP,
+                pipeline = pipe, parameters = parameters)
     

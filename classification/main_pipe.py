@@ -5,14 +5,23 @@ Created on Jan 14, 2019
 
 main_pipe allow to run and assess the different pipelines
 
+
+@todo try Custom NN with l1l2 and l1  regularizer to benefit from lasso
+@todo try xgboost regularization on xgboost
+
+@todo ask stackoverflow why reduce LR on plateau on val_loss instead of loss or 
+https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-performance-in-deep-learning-d0d4059c1c10
+
+@todo why is the new oh not performing better?
 @todo consider Amazon aws EC2
-@todo lasso for feature selection
 @todo meta_only == 0.100, worthless?
 @todo take a glance at misclassified pets
-@todo rescu pipe / breed, color / state; add high to mlp_oh anyway (pipe_mlp_low_dom_only <0.2)
+@todo test replacing breed by just imgs feat (can the cnn see the breed?)
+@todo rescu pipe.
 @todo to reduce patience could make a more complexe value in the logger which also pay attention wheather loss is 
 on a plateau
 @todo wright a transformer that check for ~~~standard scaling
+@todo make a very long mlp but with shortcut between activation (i forgot the name)
 
 @todo
 - tune dropout at the end
@@ -39,11 +48,12 @@ import warnings
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+from time import sleep
 
 #################################################################"
 #definition of all pipelines
-from classification.pipelines import *
-from time import sleep
+from classification.pipelines_rdf import *
+from classification.pipelines_mlp import *
 #################################################################"
 
 pathToAll = "../all" # path to dataset dir
@@ -56,7 +66,7 @@ if __name__ == "__main__":
 # random forest
 ##############################################################################
     parameters = {
-#          'clf__n_estimators': (200, 350), # high influence. 100: kappa ==> 0.340, 200 ==> 0.386, 200>300
+#         'clf__n_estimators':  (10, 20)#(200, 350), # high influence. 100: kappa ==> 0.340, 200 ==> 0.386, 200>300
 # ValueError: n_components must be < n_features; got 140 >= 124
 #         'u_prep__des_pipe_svd_v2__SVD__n_components': (25,50,100),
 #         'u_prep__des_pipe__tfid_vect__max_df': (0.7, 0.743, 0.775),
@@ -65,8 +75,8 @@ if __name__ == "__main__":
 #         "u_prep__pipe_img_PCA__PCA__n_components":(10,20,30,40,50,70,100,200) # pipe_rdf_img_PCA
 #          "pipe_img_PCA__PCA__n_components":(10,11),#300, 500, 750, 1000)
     }
-    
-    DEBUG = False
+
+    DEBUG = True
     if DEBUG:
         n_cpu = 1
         cv_gs = ShuffleSplit(n_splits=1, test_size=0.3, random_state=None) # for testing
@@ -90,8 +100,10 @@ if __name__ == "__main__":
 #         "pipe_rdf_real_num_only":pipe_rdf_real_num_only,
 #         "pipe_rdf_meta_only":pipe_rdf_meta_only,
 #         "pipe_rdf_img_PCA_only":pipe_rdf_img_PCA_only,  
- 
+  
 #         "pipe_rdf_oh":pipe_rdf_oh, 
+#         "pipe_rdf_oh_rm_state":pipe_rdf_oh_rm_state, 
+#         "pipe_rdf_oh_rm_breed":pipe_rdf_oh_rm_breed, 
 #         "pipe_rdf_des_svd":pipe_rdf_des_svd, 
 #         "pipe_rdf_des_svd_v2": pipe_rdf_des_svd_v2,
 #         "pipe_rdf_des_svd_v3": pipe_rdf_des_svd_v3,
@@ -103,7 +115,7 @@ if __name__ == "__main__":
         print("_ " + p + "______________________________________________")
         fitPrintPipe(pipe[p], X = train, y = train["AdoptionSpeed"], 
                      scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-  
+
             
 ##############################################################################
 # Custom MLP categorical_crossentropy and ordered with binary crossentropy
@@ -126,41 +138,51 @@ if __name__ == "__main__":
     pipe = {
         "pipe_mlp_oh":pipe_mlp_oh,
 #         "pipe_mlp_ohbis":pipe_mlp_oh,
-#         "pipe_mlp_ohter":pipe_mlp_oh, 
-        "pipe_mlp":pipe_mlp, 
-        "pipe_mlp_low_dim_only":pipe_mlp_low_dim_only, 
-        "pipe_mlp_oh_des":pipe_mlp_oh_des, 
-        "pipe_mlp_oh_des_svd":pipe_mlp_oh_des_svd,
-               
-#         "pipe_mlp_oh_img":pipe_mlp_oh_img, # too high dim
-#         "pipe_mlp_img_only":pipe_mlp_img_only,  # too high dim
-              
+# #         "pipe_mlp_ohter":pipe_mlp_oh, 
+#         "pipe_mlp":pipe_mlp, 
+#         "pipe_mlp_low_dim_only":pipe_mlp_low_dim_only, 
+#         "pipe_mlp_oh_des":pipe_mlp_oh_des, 
+#         "pipe_mlp_oh_des_svd":pipe_mlp_oh_des_svd,
+#         "pipe_mlp_oh_des_svd_meta":pipe_mlp_oh_des_svd_meta,
         "pipe_mlp_oh_img_PCA":pipe_mlp_oh_img_PCA, 
-        "pipe_mlp_oh_des_img_PCA":pipe_mlp_oh_des_img_PCA, 
-#         "pipe_mlp_doStrong_oh_des_img_PCA":pipe_mlp_doStrong_oh_des_img_PCA, 
-        "pipe_mlp_simple_oh_des_img_PCA":pipe_mlp_simpler_oh_des_img_PCA, 
-     
-#         "pipe_mlp_DoStrongNN_oh":pipe_mlp_DoStrongNN_oh,
-#         "pipe_mlp_DoWeakNN_oh":pipe_mlp_DoWeakNN_oh,
-        "pipe_mlp_reguNN_oh":pipe_mlp_reguNN_oh,
-#         "pipe_mlp_oh_input08NN":pipe_mlp_oh_input08NN,
-#         "pipe_mlp_oh_inputnaNN":pipe_mlp_oh_inputnaNN,
-#         "pipe_mlp_oh_inputna01NN":pipe_mlp_oh_inputna01NN,
-#         "pipe_mlp_oh_lowDoNN":pipe_mlp_oh_lowDoNN,
-#         "pipe_mlp_oh_DoButlastNN":pipe_mlp_oh_DoButlastNN,
+#         "pipe_mlp_oh_des_img_PCA":pipe_mlp_oh_des_img_PCA, 
+#         "pipe_mlp_reguNN_oh":pipe_mlp_reguNN_oh, # NOT TO UNDERESTIMATE
+#           
+#         "pipe_mlp_simple_oh":pipe_mlp_simpler_oh, 
+#         "pipe_mlp_oh_shallower2NN":pipe_mlp_oh_shallower2NN,
+#         "pipe_mlp_oh_shallower21NN":pipe_mlp_oh_shallower21NN,
+#         "pipe_mlp_oh_shallower3NN":pipe_mlp_oh_shallower3NN,
+#         "pipe_mlp_oh_shallower31NN":pipe_mlp_oh_shallower31NN,
+#         "pipe_mlp_oh_shallower4NN":pipe_mlp_oh_shallower4NN,
+#  
+#         "pipe_mlp_oh_lossOCCNN":pipe_mlp_oh_lossOCCNN,
+#         "pipe_mlp_oh_lossOCCQuadraticNN":pipe_mlp_oh_lossOCCQuadraticNN,
+#          
+#         "pipe_mlp_orderedNN_oh":pipe_mlp_orderedNN_oh,
+#         "pipe_mlp_dummyesNN_oh":pipe_mlp_dummyesNN_oh    
         
-        "pipe_mlp_simple_oh":pipe_mlp_simpler_oh, 
-        "pipe_mlp_oh_wider":pipe_mlp_oh_wider, 
-        "pipe_mlp_oh_shallowerNN":pipe_mlp_oh_shallowerNN,
-        "pipe_mlp_oh_shallower2NN":pipe_mlp_oh_shallower2NN,
-        "pipe_mlp_oh_shallowerWiderNN":pipe_mlp_oh_shallowerWiderNN,
-        "pipe_mlp_oh_shallowerWider2NN":pipe_mlp_oh_shallowerWider2NN,
-
-        "pipe_mlp_oh_lossOCCNN":pipe_mlp_oh_lossOCCNN,
-        "pipe_mlp_oh_lossOCCQuadraticNN":pipe_mlp_oh_lossOCCQuadraticNN,
-        
-        "pipe_mlp_orderedNN_oh":pipe_mlp_orderedNN_oh,
-        "pipe_mlp_dummyesNN_oh":pipe_mlp_dummyesNN_oh    
+############################################################################""
+############################################################################""
+############################################################################""        
+# useless pipes               
+# #         "pipe_mlp_oh_img":pipe_mlp_oh_img, # too high dim
+# #         "pipe_mlp_img_only":pipe_mlp_img_only,  # too high dim
+#                
+# #         "pipe_mlp_doStrong_oh_des_img_PCA":pipe_mlp_doStrong_oh_des_img_PCA, 
+# #         "pipe_mlp_simple_oh_des_img_PCA":pipe_mlp_simpler_oh_des_img_PCA,  # behave worse than BasicNN
+#       
+# #         "pipe_mlp_DoStrongNN_oh":pipe_mlp_DoStrongNN_oh,
+# #         "pipe_mlp_DoWeakNN_oh":pipe_mlp_DoWeakNN_oh,
+# #         "pipe_mlp_oh_input08NN":pipe_mlp_oh_input08NN,
+# #         "pipe_mlp_oh_inputnaNN":pipe_mlp_oh_inputnaNN,
+# #         "pipe_mlp_oh_inputna01NN":pipe_mlp_oh_inputna01NN,
+# #         "pipe_mlp_oh_lowDoNN":pipe_mlp_oh_lowDoNN,
+# #         "pipe_mlp_oh_DoButlastNN":pipe_mlp_oh_DoButlastNN,
+# #         "pipe_mlp_oh_shallowerWiderNN":pipe_mlp_oh_shallowerWiderNN,
+# #         "pipe_mlp_oh_shallowerWider2NN":pipe_mlp_oh_shallowerWider2NN,
+# 
+# #         "pipe_mlp_oh_wider":pipe_mlp_oh_wider, 
+# #         "pipe_mlp_oh_shallowerNN":pipe_mlp_oh_shallowerNN,
     }
             
     
@@ -210,17 +232,73 @@ if __name__ == "__main__":
 ############################################################################"
 # run result and observations/conclusions
 ############################################################################
-"""
-observation on the 2 first run for all pipe.
 
-@todo if debug no plot 
-@todo need more smoothing more patience @see plot pipe_mlp_orderedNN
-@todo pb with learning rate decrease @see plot pipe_mlp_loss_quadraticOCCNN # monitor loss or cohen kappa if increase > reduce lr
-@todo still overfit du to too many dim. MLP scores are getting close from rn_forest
+"""
+New transformer  with mlp and fixes of mlp:
+- no improvement though more info and reduce dim. (efficiency was clear with rdf). why don't we earn at least from state
+or when we have other extra dim like with de
+
+@todo perform bad why cbreducelr?
+
+_ pipe_mlp_oh______________________________________________
+run n 0 =====
+dishonest: False
+X dim print (8995, 205)
+2019-02-18 01:10:59.458898: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: SSE4.1 SSE4.2 AVX
+2019-02-18 01:10:59.462860: I tensorflow/core/common_runtime/process_util.cc:69] Creating new thread pool with default inter op setting: 2. Tune using inter_op_parallelism_threads for best performance.
+Num of epoch  56 (-patience).
+gen['score_train']) 0.4193953973039066
+gen['score_test']) 0.31332586592989986
+QStandardPaths: XDG_RUNTIME_DIR points to non-existing path '/run/user/1000/snap.eclipse', please create it with 0700 permissions.
+_ pipe_mlp_ohbis______________________________________________
+run n 0 =====
+dishonest: False
+X dim print (8995, 209)
+Num of epoch  53 (-patience).
+gen['score_train']) 0.4148758721687623
+gen['score_test']) 0.2850530257795274
+"""
+
+""""
+New transformer  with rdf
+
+_ pipe_rdf______________________________________________
+X dim print (9997, 19)
+Best score: 0.343
+_ pipe_rdf_oh______________________________________________
+Fitting 3 folds for each of 1 candidates, totalling 3 fits
+X dim print (9995, 211)
+Best score: 0.321
+_ pipe_rdf_oh_rm_state______________________________________________
+X dim print (14993, 210)
+Best score: 0.303
+_ pipe_rdf_oh_rm_breed______________________________________________
+X dim print (14993, 36)
+Best score: 0.270
+_ pipe_rdf_low_dim_only______________________________________________
+X dim print (14993, 18)
+Best score: 0.325
+
+- dim of oh reduce
+- state is actually only <15 of dim and matters
+- breed is still 189 though very informational and beneficial even for rdf.
+- rescuerID is actually only 0.015-0.020 here though not negligeable
+
+"""
+
+
+"""
+observation on the first run of new metric and early stop for all pipe.(2 runs)
+
+@DONE need more smoothing more patience @see plot pipe_mlp_orderedNN
+@DONE pb with learning rate decrease @see plot pipe_mlp_loss_quadraticOCCNN 
+@todo still overfit du to too many dim. 
+MLP scores are getting close from rn_forest
 
 
 input do inputna01NN > inputnaNN > input05NN > input08NN
 DoButLast not interesting.
+wider and shalowerwider not functionnig (too much param?)
 """
 
 """

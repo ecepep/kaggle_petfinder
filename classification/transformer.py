@@ -16,11 +16,10 @@ import re
 from traceback import print_tb
 
 
-
 class DataFrameSelector(BaseEstimator, TransformerMixin):
     '''
     '''
-    def __init__(self, attribute_names, dtype=None, ravel = True, regex = False):
+    def __init__(self, attribute_names, dtype=None, ravel = False, regex = False):
         '''
         
         :param attribute_names:
@@ -49,8 +48,6 @@ class DataFrameSelector(BaseEstimator, TransformerMixin):
         
         return X_selected.values
     
-    
-    
 class StringConcat(BaseEstimator, TransformerMixin):
     '''
     concat several string features to a single string 
@@ -71,7 +68,6 @@ class StringConcat(BaseEstimator, TransformerMixin):
         remove_sep = lambda s: re.sub(r"[^A-Za-z0-9]", "", s)
         X = np.vectorize(remove_sep)(X)
         return np.apply_along_axis(self._concat, axis = 1, arr = X)
-        
 
 class FnanToStr(BaseEstimator, TransformerMixin):
     '''
@@ -103,8 +99,6 @@ class FnanToStr(BaseEstimator, TransformerMixin):
             for i in range(0, X.shape[1]):
                 X[:, i] = FnanToStr.on_array(X[:, i])
             return X
-        
-        
         
 class Formater(BaseEstimator, TransformerMixin):
     '''
@@ -165,8 +159,6 @@ class AsType(Formater):
     def transform(self, X):
         return X.astype(self.astype)
 
-
-
 class PipeLabelEncoder(BaseEstimator, TransformerMixin):
     """
     solve label encoder issues: TypeError: fit_transform() takes 2 positional arguments but 3 were given,
@@ -203,8 +195,6 @@ class PipeLabelEncoder(BaseEstimator, TransformerMixin):
             Xt[:,i] = np.vectorize(f)(Xt[:,i], mapping)
         return Xt
     
-    
-    
 class PipeOneHotEncoder(PipeLabelEncoder):
     """
     Extend PipeLabelEncoder to one hot
@@ -231,9 +221,36 @@ class PipeOneHotEncoder(PipeLabelEncoder):
                     XtOH[i, cumsum_len[ji]+Xt[i,ji]] = 1
         
         return XtOH
+
+class ColorBreedOH(BaseEstimator, TransformerMixin):
+    '''
+    Concat all colors or breeds together in one single one hot encoding 
+    to divide their dim by respectively 3 and ~~2
+    '''
+    def __init__(self, weights, silent = True):
+        self.onehot = PipeOneHotEncoder(silent = silent)
+        self.weights = weights
+                
+    def fit(self, Xt, y=None):     
+        '''
+        learn the level for Breed0, Breed1, Breed2 together
+        '''
+        self.onehot.fit(np.reshape(Xt, (np.product(Xt.shape), 1)))
+        return self
     
-    
-    
+    def transform(self, Xt):
+        Xt_transform = None
+        self.weights = [1]* Xt.shape[1] if self.weights is None else self.weights
+        
+        for j in range(0, Xt.shape[1]):
+            oh_col = self.onehot.transform(np.reshape(Xt[:,j], (Xt[:,j].shape[0], 1)))
+            if Xt_transform is None:
+                Xt_transform = oh_col * self.weights[j]
+            else:
+                Xt_transform = Xt_transform + oh_col * self.weights[j]
+        
+        return Xt_transform
+                
 class InferNA(BaseEstimator, TransformerMixin):
     '''
     infer na to mean of value (even for unordered value because they are all binary)
