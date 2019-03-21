@@ -90,15 +90,13 @@ class CustomNNCategorical(CustomNNBase):
 #
         
         self.kappa_weights = kappa_weights
-        if len(self.metrics) > 1 : raise "nope"
+        if len(self.metrics) > 1 : raise "TODO"
     
         
     def __compile(self, input_shape, output_shape):
         ter = lambda x, i: None if len(x) <= i else x[i]
-        reg = [regularizers.l2(i) for i in self.reg]
+        reg = [regularizers.l2(i) for i in self.reg]#@TODO ALSO USE L1 FOR BETTER FEATURE SELECTION
         h_act = self.h_act * round(len(self.hidden) / len(self.h_act))
-#         RuntimeError: Cannot clone object CustomNNCategorical(batch_size=32,..., reg=[]),
-# as the constructor either does not set or modifies parameter h_act
         
         self.model = Sequential()
         
@@ -185,7 +183,7 @@ class CustomNNCategorical(CustomNNBase):
         :param output:
         '''
         self.metric_plot = None
-        self.patience = 20 #for cbEarly is enoughfrom observation
+        self.patience = 20 #for cbEarly is enoughfrom observation  @todo in init
                     
         if self.metrics[0] == "accuracy":
             self.metric_plot = "acc"

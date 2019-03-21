@@ -1,4 +1,4 @@
-'''
+'''es
 Created on Jan 14, 2019
 
 @author: ppc
@@ -10,7 +10,7 @@ from sklearn.model_selection._split import  train_test_split
 import pdb
 import sys
 from traceback import print_tb
-from sklearn.model_selection._search import GridSearchCV
+from sklearn.model_selection._search import GridSearchCV, RandomizedSearchCV
 from random import sample
 import sklearn.metrics as metrics
 
@@ -25,6 +25,13 @@ from classification.transformer import DimPrinter
 from pdb import set_trace
 import numpy as np
 from sklearn.utils.deprecation import DeprecationDict
+from tempfile import mkdtemp
+from shutil import rmtree
+from sklearn.externals.joblib import Memory
+from sklearn.datasets.base import load_digits
+import test
+from numpy import mean
+
 
 
 def getTrainTest2(pathToAll = "../", silent = True):
@@ -53,15 +60,15 @@ def getTrainTest2_meta_img_rn(pathToAll = "../"):
     # add features from the preprocessed img (through a frozen cnn)
     train, test = merge_img_fcnn(img_dir, train, test)
         
-    def add_rn(x):
-        '''
-        @todo should be a transformer
-        :param x:
-        '''
-        x.loc[:, "rn"] = sample(range(10000000), x.shape[0])
-        return x
-    train = add_rn(train)
-    test = add_rn(test)
+#     def add_rn(x):
+#         '''
+#         @todo should be a transformer
+#         :param x:
+#         '''
+#         x.loc[:, "rn"] = sample(range(10000000), x.shape[0])
+#         return x
+#     train = add_rn(train)
+#     test = add_rn(test)
     
     return train, test
 
@@ -141,6 +148,31 @@ def printCatGen(gen, hist = False, plotname = "NN", saving_file = None):
         plot = clf.plot_history(plotname = plotname, saving_file = saving_file)
         return plot
 
+
+class ResGS():
+    '''
+    '''
+    def __init__(self):
+        self.param = None
+        self.train = []
+        self.test = []
+        self.train_avg = None
+        self.test_avg = None
+        
+    def average_score(self):
+        self.train_avg = mean(self.train)
+        self.test_avg = mean(self.test)
+        
+    def __repr__(self):
+        return str(self.param) + "\ntrain;" + str(self.train_avg) + "\ntest:" + str(self.test_avg)
+       
+    def __cmp__(self, other):
+        return self.test_avg.__cmp__(other.test_avg)
+    def __lt__(self, other):
+        return self.test_avg.__lt__(other.test_avg)
+    def __eq__(self, other):
+        return self.test_avg.__eq__(other.test_avg)
+
 def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None, verboseP = 3):
     '''
     fit the grid search with x and y and print info about it
@@ -153,6 +185,9 @@ def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None, verboseP =
 #     if not pipeline is  None: print("pipeline:", [name for name, _ in pipeline.steps])
 #     if not parameters is None: print("parameters:")
 #     if not parameters is None: pprint(parameters)
+
+    
+
     t0 = time()
 #     try:
     grid_search.fit(X, y)
@@ -160,22 +195,42 @@ def fitPrintGS(grid_search, X, y, pipeline = None, parameters = None, verboseP =
 #         traceback.print_tb(sys.exc_info()[2])
 #         print("ERROR:", e)
 #         pdb.post_mortem()
+    print("done in %0.3fs" % (time() - t0))
     
-    if verboseP >= 2:
-        print(grid_search.cv_results_["params"])
+    nb_param = len(grid_search.cv_results_["params"])
+    resGS = [None]*nb_param
+    for j in range(0, nb_param):
+        resGS[j] = ResGS()
+        resGS[j].param = grid_search.cv_results_["params"][j] 
+        resGS[j].train = [None] * grid_search.n_splits_ 
+        resGS[j].test = [None] * grid_search.n_splits_
         for i in range(0, grid_search.n_splits_):
-            if verboseP >= 3:
-                print(str(i) + " train", grid_search.cv_results_["split"+str(i)+"_train_score"])
-            print(str(i) + " test ", grid_search.cv_results_["split"+str(i)+"_test_score"])
-        print("done in %0.3fs" % (time() - t0))
-                
-    if verboseP >= 1:
-        print("Best score: %0.3f" % grid_search.best_score_)
-        best_parameters = grid_search.best_estimator_.get_params()
-        for param_name in sorted(parameters.keys()):
-            print("\t%s: %r" % (param_name, best_parameters[param_name]))
+                resGS[j].train[i] = grid_search.cv_results_["split"+str(i)+"_train_score"][j]
+                resGS[j].test[i] = grid_search.cv_results_["split"+str(i)+"_test_score"][j]
+        resGS[j].average_score()
 
-def fitPrintPipe(pipe, X, y, scoring, cv, n_jobs, verbose=1, parameters = None, verboseP = 4):
+    resGS = sorted(resGS)
+
+    [print(r) for r in resGS]
+    
+#########################################################################################################    
+    print(grid_search.best_estimator_.named_steps.clf.feature_importances_)
+    # plot
+#     plt.bar(range(len(grid_search.best_estimator_.named_steps.clf.feature_importances_)), 
+#                grid_search.best_estimator_.named_steps.clf.feature_importances_)
+#     plt.show()
+#########################################################################################################   
+    return resGS
+    
+#     if verboseP >= 1:
+#         print("Best score: %0.3f" % grid_search.best_score_)
+#         best_parameters = grid_search.best_estimator_.get_params()
+#         for param_name in sorted(parameters.keys()):
+#             print("\t%s: %r" % (param_name, best_parameters[param_name]))
+
+def fitPrintPipe(pipe, X, y, scoring, cv, n_jobs, 
+                 verbose=1, parameters = None, verboseP = 4,
+                 rn_search_iter = None, refit = False):
     '''
     
     :param pipe:
@@ -196,11 +251,22 @@ def fitPrintPipe(pipe, X, y, scoring, cv, n_jobs, verbose=1, parameters = None, 
          - 2 all test score
          - 3 all train and test
          - 4 print X dim before clf
+    :param rn_search_iter: def = None, if integer do a randomized search instead of grid search 
+    with rn_search_iter iterations
     '''
+    
     if verboseP>=4:
         pipe.steps = pipe.steps[:-1] + [("dim_print", DimPrinter())] + pipe.steps[-1:] # add a print of X dimension
-    grid_search = GridSearchCV(pipe, parameters, scoring = scoring, cv=cv,n_jobs=n_jobs,
-                            verbose=verbose, return_train_score = True)                              
-    fitPrintGS(grid_search, X = X, y = y, verboseP = verboseP,
+    if rn_search_iter:
+        grid_search = RandomizedSearchCV(estimator = pipe, param_distributions =  parameters,
+                                         n_iter=rn_search_iter, scoring = scoring, cv=cv,n_jobs=n_jobs,
+                                verbose=verbose, return_train_score = True, refit=refit)       
+    else:
+        grid_search = GridSearchCV(pipe, parameters, scoring = scoring, cv=cv,n_jobs=n_jobs,
+                                verbose=verbose, return_train_score = True, refit=refit)                              
+    return fitPrintGS(grid_search, X = X, y = y, verboseP = verboseP,
                 pipeline = pipe, parameters = parameters)
+    
+       
+    
     

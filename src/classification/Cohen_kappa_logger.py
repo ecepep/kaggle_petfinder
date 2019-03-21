@@ -18,7 +18,7 @@ from numpy import mean
 class Cohen_kappa_logger(Callback):
     '''
     Add to the logs "val_cohen_kappa" and "cohen_kappa" at each epoch's end to record cohen's kappa score.
-    Works fine along with EarlyStopping
+    Works fine along with EarlyStopping. val_cohen_kappa is avg smoothed
     '''
     def __init__(self, output_to_category=None,
                  X_train = None, y_train = None, 
@@ -52,8 +52,6 @@ class Cohen_kappa_logger(Callback):
         score_train = self.cohen_kappa(pred_train, self.y_train)
         score_val = self.cohen_kappa(pred_val, self.y_val)
         
-        # or \
-#         len(self.model.history.history["val_cohen_kappa"]) == 0
         if not "val_cohen_kappa" in self.model.history.history.keys(): # not defined on first run
             smoothed_val_score = score_val # mean(self.model.history.history["val_cohen_kappa"][-(self.smooth_window+1):])
         else: 

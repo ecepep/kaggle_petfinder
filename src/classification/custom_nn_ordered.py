@@ -11,9 +11,13 @@ import warnings
 
 class CustomNNordered(CustomNNCategorical):
     '''
-    implement an mlp classifier for ordered categorical Ys represented as:
+    implement an mlp classifier for ordered categorical 
+    Ys represented as:
         0: [0, 0, 0, 0, 1],1: [0, 0, 0, 1, 1],2: [0, 0, 1, 1, 1]...
         
+    loss: "binary_crossentropy"
+    final activation: sigmoid
+    
     simplistic solution to infer importance of ordering to the NN.
     '''
     def __init__(self, *args, **kwargs):

@@ -52,6 +52,8 @@ def replace_step(pipe, step_name, new_step):
     :param step_name: as string :ex "clf"
     :param new_step: the usual tupple :ex ("clf", RandomForest())
     :return a new pipe where the step as been replace
+    
+    :warning has to used pipe.steps and not pipe.named_step
     '''
     for step in range(0, len(pipe.steps)):
         if pipe.steps[step][0] ==  step_name:
@@ -66,7 +68,6 @@ numeric_features = ['Age', 'Quantity', 'Fee', 'VideoAmt', 'PhotoAmt']
 ordinal_features = ['MaturitySize', 'FurLength', 'Health']
 binary_features = ['Gender', 'Vaccinated', 'Dewormed', 'Sterilized']
 
-print("separation low high to be questionned for breed and state, I wonder if they ain't the same num of label. Incoherence? @todo")
 breed = ['Breed1', 'Breed2']
 color = ['Color1', 'Color2', 'Color3']
 

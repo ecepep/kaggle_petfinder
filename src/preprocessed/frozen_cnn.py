@@ -35,7 +35,6 @@ class FrozenCnn():
         :param n_pop: number of popped layer
         '''
         self.cnn = cnn
-        self.cnn = VGG16
         self.inputshape = inputshape
         if self.cnn == VGG16 and self.inputshape != (224,224): raise "input shape does not match keras VGG16"
         self.n_pop = n_pop

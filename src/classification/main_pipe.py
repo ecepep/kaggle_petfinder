@@ -6,8 +6,8 @@ Created on Jan 14, 2019
 main_pipe allow to run and assess the different pipelines
 
 
+@todo take a glance at misclassified pets
 @todo try Custom NN with l1l2 and l1  regularizer to benefit from lasso
-@todo try xgboost regularization on xgboost
 
 @todo ask stackoverflow why reduce LR on plateau on val_loss instead of loss or 
 https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-performance-in-deep-learning-d0d4059c1c10
@@ -15,13 +15,11 @@ https://towardsdatascience.com/understanding-learning-rates-and-how-it-improves-
 @todo why is the new oh not performing better?
 @todo consider Amazon aws EC2
 @todo meta_only == 0.100, worthless?
-@todo take a glance at misclassified pets
-@todo test replacing breed by just imgs feat (can the cnn see the breed?)
 @todo rescu pipe.
 @todo to reduce patience could make a more complexe value in the logger which also pay attention wheather loss is 
 on a plateau
 @todo wright a transformer that check for ~~~standard scaling
-@todo make a very long mlp but with shortcut between activation (i forgot the name)
+@todo make a very long mlp but with shortcut between activation
 
 @todo
 - tune dropout at the end
@@ -44,10 +42,6 @@ from sklearn.metrics.scorer import make_scorer
 from sklearn.model_selection._split import ShuffleSplit
 
 from multiprocessing import cpu_count
-import warnings
-import copy
-import numpy as np
-import matplotlib.pyplot as plt
 from time import sleep
 
 #################################################################"
@@ -74,7 +68,17 @@ if __name__ == "__main__":
 #         "clf__max_features":("sqrt", "log2", 2,3,4,5,6) # auto = sqrt, seems fine
 #         "u_prep__pipe_img_PCA__PCA__n_components":(10,20,30,40,50,70,100,200) # pipe_rdf_img_PCA
 #          "pipe_img_PCA__PCA__n_components":(10,11),#300, 500, 750, 1000)
-    }
+
+################ param xgb
+    "clf__max_depth":(5,7,10, 13),
+    "clf__n_estimators":(150,200,300),
+    "clf__min_child_weight":(1,3,5,7,9),
+    "clf__subsample":(0.5,0.7,0.8,0.9, 0.95),
+    "clf__reg_lambda":(0,10,100,500, 1000),
+    'clf__reg_alpha':(1e-2, 0.1, 0.65, 1),
+    "clf__colsample_bytree":(0.5,0.7,0.8,0.9),
+    'clf__gamma':(0,0.1,0.3,0.5),
+}
 
     DEBUG = True
     if DEBUG:
@@ -82,6 +86,9 @@ if __name__ == "__main__":
         cv_gs = ShuffleSplit(n_splits=1, test_size=0.3, random_state=None) # for testing
         print("DEBUG no multithread, no cv")
     else:
+        res_path = pathToAll + "/result/"
+        print("res_path", res_path)
+        sys.stdout = open(res_path + "xgb", 'w') # console output to file
         n_cpu = cpu_count()-1 #  1   cpu_count()-1
         cv_gs = 3 # strat cross-val # necessary
     
@@ -89,9 +96,15 @@ if __name__ == "__main__":
       
     pipe = {
 # #         "pipe_rn_cmp":pipe_rn_cmp, 
-#         "pipe_rdf":pipe_rdf, 
+        "pipe_rdf":pipe_rdf, 
 #         "pipe_rdf_extra_dim":pipe_rdf_extra_dim, # show extra rn dim influence
 #         "pipe_rdf_img":pipe_rdf_img, 
+
+#########################
+
+# try xgb with a feature pipeline that combines all all features
+#########################
+
 #         "pipe_rdf_img_PCA":pipe_rdf_img_PCA, 
            
 #         "pipe_rdf_img_only":pipe_rdf_img_only, 
@@ -109,16 +122,25 @@ if __name__ == "__main__":
 #         "pipe_rdf_des_svd_v3": pipe_rdf_des_svd_v3,
 #         "pipe_rdf_des_svd_meta":pipe_rdf_des_svd_meta,
 #         "pipe_rdf_low_dim_only":pipe_rdf_low_dim_only, 
-#         "pipe_rdf_des":pipe_rdf_des,
+        "pipe_rdf_des":pipe_rdf_des,
+        "pipe_rdf_des_meta":pipe_rdf_des_meta,
     }
     for p in pipe.keys():
-        print("_ " + p + "______________________________________________")
+#         print("_ " + p + "______________________________________________")
+#         fitPrintPipe(pipe[p], X = train, y = train["AdoptionSpeed"], 
+#                      scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
+        print("_ " + p + "______________________________________________xgb")
+        pipe[p] = to_xgb(pipe[p])
         fitPrintPipe(pipe[p], X = train, y = train["AdoptionSpeed"], 
-                     scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu, verbose=1, parameters = parameters)
-
+                     scoring = qwk_scorer, cv = cv_gs, n_jobs = n_cpu,
+                     verbose=1, parameters = parameters,
+                     rn_search_iter = 1, refit=True)
+        print("LOOK AT VALUES FOR XGB PARAMS ON KAGGLE")
             
 ##############################################################################
 # Custom MLP categorical_crossentropy and ordered with binary crossentropy
+# or
+# Custom xgboosted tree 
 #############################################################################    
 
     # du to very long computation with mlp, run outputs are save to a file
@@ -130,13 +152,13 @@ if __name__ == "__main__":
         print("res_path", res_path)
         sys.stdout = open(res_path + "mlp", 'w') # console output to file
         print("WARNING n_run =1")
-        n_run = 2 # 3
+        n_run = 3 # 3
     
     n_cpu = 1 # mutlithreading already implemented through keras
     parameters = {}
 
     pipe = {
-        "pipe_mlp_oh":pipe_mlp_oh,
+#         "pipe_mlp_oh":pipe_mlp_oh,
 #         "pipe_mlp_ohbis":pipe_mlp_oh,
 # #         "pipe_mlp_ohter":pipe_mlp_oh, 
 #         "pipe_mlp":pipe_mlp, 
@@ -144,7 +166,7 @@ if __name__ == "__main__":
 #         "pipe_mlp_oh_des":pipe_mlp_oh_des, 
 #         "pipe_mlp_oh_des_svd":pipe_mlp_oh_des_svd,
 #         "pipe_mlp_oh_des_svd_meta":pipe_mlp_oh_des_svd_meta,
-        "pipe_mlp_oh_img_PCA":pipe_mlp_oh_img_PCA, 
+#         "pipe_mlp_oh_img_PCA":pipe_mlp_oh_img_PCA, 
 #         "pipe_mlp_oh_des_img_PCA":pipe_mlp_oh_des_img_PCA, 
 #         "pipe_mlp_reguNN_oh":pipe_mlp_reguNN_oh, # NOT TO UNDERESTIMATE
 #           

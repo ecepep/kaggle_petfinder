@@ -1,17 +1,21 @@
 ### Project
 
 .gitignore
-all/
+src/all/
 **/**/*
 paper/*
 **/**/*.pdf
 **/*.pdf
 !README
-!bench_sk/*.py
-!tf_test/*.py
-!NN_loss/*.py
-!classification/*.py
-!preprocessed/*.py
+!work_undertaken.md
+!work_undertaken.ipynb
+!work_undertaken.html
+!src/README
+!src/bench_sk/*.py
+!src/tf_test/*.py
+!src/NN_loss/*.py
+!src/classification/*.py
+!src/preprocessed/*.py
 
 
 # Github template #########################################

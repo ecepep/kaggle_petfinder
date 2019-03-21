@@ -7,6 +7,9 @@ Created on Feb 21, 2019
 # pipes for random forest
 ##############################################################################
 from classification.pipelines_base import * 
+import xgboost as xgb
+from xgboost.training import cv
+
 
 # most basic pipe for reference, gives decent result ~0.340
 pipe_rdf = Pipeline([
@@ -109,6 +112,19 @@ pipe_rdf_des = Pipeline([
 ])
 
 
+# add desccription features 
+pipe_rdf_des_meta = Pipeline([
+    ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
+#     , transformer_weights=None
+    ('u_prep', FeatureUnion([
+        ('num_pipe', num_pipe_sparse),
+        ('nom_pipe_label_encode', nom_pipe_label_encode_sparse),
+        ('des_pipe', des_pipe),
+        ('meta_label_simple_concat_pipe', meta_label_simple_concat_pipe)
+    ])),
+    ('clf', RandomForestClassifier(n_estimators = 300)),
+])
+
 
 pipe_rdf_des_svd = Pipeline([
     ('infer_na_mean', InferNA(feat_with_nas, method = "mean")), 
@@ -151,3 +167,29 @@ pipe_rdf_oh_rm_breed.named_steps.u_prep.transformer_list[1] = ("rm_breed_oh", rm
 pipe_rdf_low_dim_only = copy.deepcopy(pipe_rdf)
 pipe_rdf_low_dim_only.named_steps.u_prep.transformer_list[1] = \
     ('nom_pipe_label_encode_low_dim_scale', nom_pipe_label_encode_low_dim_scale)
+    
+
+def to_xgb(pipe):
+    '''
+#     https://www.analyticsvidhya.com/blog/2016/03/complete-guide-parameter-tuning-xgboost-with-codes-python/
+    replace "clf" step in pipe for an xgb
+    
+    param of xgb were optimized to the pipe_rdf_des thanks to a search.
+    
+    :param pipe:
+    '''
+
+    
+    pipe = replace_step(pipe, "clf", ('clf', copy.deepcopy(
+         xgb.XGBClassifier(max_depth=10, learning_rate=0.1, n_estimators=200, silent=True, objective='binary:logistic',
+                   booster='gbtree', n_jobs=1, nthread=None, gamma=0.1, min_child_weight=5, max_delta_step=0, 
+                   subsample=0.8, colsample_bytree=0.7, colsample_bylevel=1, reg_alpha=0.65, reg_lambda=100,
+                    scale_pos_weight=1, base_score=0.5, random_state=0, 
+                    seed=None, missing=None) 
+        )) )
+    return pipe
+    
+    
+    
+
+    
